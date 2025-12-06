@@ -12,8 +12,6 @@ import {
 } from "@/lib/mock-data";
 import { IdeaCreationModal } from "./idea-creation-modal";
 
-type SortMode = "recent" | "old";
-
 type AdminIdeaListProps = {
   activeStatus: IdeaStatus | string;
   folders: FolderConfig[];
@@ -31,7 +29,6 @@ export function AdminIdeaList({
   addIdeaAction,
   addFolderAction,
 }: AdminIdeaListProps) {
-  const [sortMode, setSortMode] = useState<SortMode>("recent");
   const [filterOpen, setFilterOpen] = useState(false);
   const [query, setQuery] = useState("");
   const [creationOpen, setCreationOpen] = useState(false);
@@ -52,32 +49,26 @@ export function AdminIdeaList({
   }, []);
 
   const sorted = useMemo(() => {
-    const base =
-      sortMode === "recent"
-        ? [...items].sort((a, b) => Number(b.id) - Number(a.id))
-        : [...items].sort((a, b) => Number(a.id) - Number(b.id));
-
+    const base = [...items].sort((a, b) => Number(b.id) - Number(a.id));
     if (!query.trim()) return base;
     const q = query.toLowerCase();
     return base.filter((i) => i.label.toLowerCase().includes(q));
-  }, [items, sortMode, query]);
+  }, [items, query]);
 
   const displayItems = sorted.map((i) => {
-    const label = i.label;
-    const idx = label.indexOf(" (Impact:");
-    if (idx === -1) return label;
-    return label.slice(0, idx);
+    const l = i.label;
+    const idx = l.indexOf(" (Impact:");
+    if (idx === -1) return l;
+    return l.slice(0, idx);
   });
-
-  const filterLabel = sortMode === "recent" ? "Récent" : "Ancien";
 
   return (
     <div className="relative col-span-5 px-2">
       {creationOpen && (
         <IdeaCreationModal
           activeStatus={activeStatus}
-          onClose={() => setCreationOpen(false)}
-          onCreate={addIdeaAction}
+          closeAction={() => setCreationOpen(false)}
+          createAction={addIdeaAction}
         />
       )}
 
@@ -101,32 +92,8 @@ export function AdminIdeaList({
               }`}
             >
               <FaFilter className="h-3 w-3" />
-              <span>{filterLabel}</span>
+              <span>Récent</span>
             </button>
-            {filterOpen && (
-              <div className="absolute right-0 z-20 mt-1 w-44 rounded-md border border-zinc-700 bg-[#050509] py-1 text-[11px] text-zinc-200 shadow-lg">
-                <button
-                  type="button"
-                  className="flex w-full items-center px-3 py-1.5 text-left hover:bg-zinc-800"
-                  onClick={() => {
-                    setSortMode("recent");
-                    setFilterOpen(false);
-                  }}
-                >
-                  Récent
-                </button>
-                <button
-                  type="button"
-                  className="flex w-full items-center px-3 py-1.5 text-left hover:bg-zinc-800"
-                  onClick={() => {
-                    setSortMode("old");
-                    setFilterOpen(false);
-                  }}
-                >
-                  Ancien
-                </button>
-              </div>
-            )}
           </div>
           <input
             value={query}
@@ -156,15 +123,25 @@ export function AdminIdeaList({
           creationOpen ? "blur-sm pointer-events-none" : ""
         }`}
       >
-        <AnimatedList
-          items={displayItems}
-          onItemSelect={(item, index) => selectAction({ item, index })}
-          showGradients
-          enableArrowNavigation
-          displayScrollbar
-          className="w-full"
-          itemClassName="border-l-2 border-transparent hover:border-[#5227FF] transition-colors"
-        />
+        {displayItems.length === 0 ? (
+          <div className="flex h-40 items-center justify-center text-[12px] text-zinc-500">
+            Aucune idée dans cet espace. Clique sur
+            <span className="mx-1 rounded-full bg-[#5227FF] px-2 py-0.5 text-white">
+              + Idée
+            </span>
+            pour en ajouter une.
+          </div>
+        ) : (
+          <AnimatedList
+            items={displayItems}
+            onItemSelect={(item, index) => selectAction({ item, index })}
+            showGradients
+            enableArrowNavigation
+            displayScrollbar
+            className="w-full"
+            itemClassName="border-l-2 border-transparent hover:border-[#5227FF] transition-colors"
+          />
+        )}
       </div>
     </div>
   );

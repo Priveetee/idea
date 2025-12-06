@@ -5,15 +5,13 @@ import ClickSpark from "@/components/ui/click-spark";
 import Stepper, { Step } from "@/components/ui/stepper";
 import type { IdeaStatus } from "@/lib/mock-data";
 
-type SelectedIdea = {
-  status: IdeaStatus;
-  index: number;
-  label: string;
-  id: string;
-};
-
 type AdminIdeaPanelProps = {
-  selected: SelectedIdea | null;
+  selected: {
+    status: IdeaStatus | string;
+    index: number;
+    label: string;
+    id: string;
+  } | null;
   activeStatus: IdeaStatus;
   processing: boolean;
   managerNote: string;

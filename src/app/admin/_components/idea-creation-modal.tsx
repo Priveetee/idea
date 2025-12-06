@@ -5,14 +5,14 @@ import type { IdeaStatus } from "@/lib/mock-data";
 
 type IdeaCreationModalProps = {
   activeStatus: IdeaStatus | string;
-  onClose: () => void;
-  onCreate: (_: { label: string; status: IdeaStatus | string }) => void;
+  closeAction: () => void;
+  createAction: (_: { label: string; status: IdeaStatus | string }) => void;
 };
 
 export function IdeaCreationModal({
   activeStatus,
-  onClose,
-  onCreate,
+  closeAction,
+  createAction,
 }: IdeaCreationModalProps) {
   const [step, setStep] = useState<1 | 2>(1);
   const [draftTitle, setDraftTitle] = useState("");
@@ -30,7 +30,7 @@ export function IdeaCreationModal({
     setComplexity("");
     setTag("");
     setError("");
-    onClose();
+    closeAction();
   };
 
   const handleNextFromTitle = () => {
@@ -69,7 +69,7 @@ export function IdeaCreationModal({
       finalLabel = `[T${tgiNumber}] ${base}`;
     }
 
-    onCreate({ label: finalLabel, status: activeStatus });
+    createAction({ label: finalLabel, status: activeStatus });
     reset();
   };
 
@@ -88,7 +88,6 @@ export function IdeaCreationModal({
             </span>
           </div>
         </div>
-
         {step === 1 && (
           <div className="space-y-4">
             <div className="space-y-2">
@@ -97,7 +96,7 @@ export function IdeaCreationModal({
                 value={draftTitle}
                 onChange={(e) => setDraftTitle(e.target.value)}
                 placeholder="Décris rapidement ton idée..."
-                className="min-h-[80px] w-full rounded-xl border border-zinc-700 bg-zinc-950 px-3 py-2 text-[13px] text-zinc-100 outline-none focus:border-[#5227FF]"
+                className="min-h-20 w-full rounded-xl border border-zinc-700 bg-zinc-950 px-3 py-2 text-[13px] text-zinc-100 outline-none focus:border-[#5227FF]"
               />
               {error && <div className="text-[11px] text-red-400">{error}</div>}
               <p className="text-[11px] text-zinc-500">
@@ -123,7 +122,6 @@ export function IdeaCreationModal({
             </div>
           </div>
         )}
-
         {step === 2 && (
           <div className="space-y-6">
             <div className="grid grid-cols-2 gap-6 text-[11px] text-zinc-300">
@@ -174,7 +172,6 @@ export function IdeaCreationModal({
                 </div>
               </div>
             </div>
-
             <div className="space-y-2">
               <div className="text-[11px] text-zinc-500">
                 Tag libre (optionnel)
@@ -186,7 +183,6 @@ export function IdeaCreationModal({
                 className="h-9 w-full rounded-md border border-zinc-700 bg-zinc-950 px-3 text-[12px] text-zinc-100 outline-none focus:border-[#5227FF]"
               />
             </div>
-
             <div className="mt-2 flex justify-between gap-2">
               <button
                 type="button"

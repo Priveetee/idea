@@ -14,7 +14,7 @@ import { AdminIdeaList } from "./_components/admin-idea-list";
 import { AdminIdeaPanel } from "./_components/admin-idea-panel";
 
 type SelectedIdea = {
-  status: IdeaStatus;
+  status: IdeaStatus | string;
   index: number;
   label: string;
   id: string;
@@ -68,7 +68,7 @@ export default function AdminPage() {
     const item = filteredIdeas[payload.index];
     if (!item) return;
     setSelected({
-      status: activeStatus as IdeaStatus,
+      status: item.status,
       index: payload.index,
       label: item.label,
       id: item.id,
@@ -87,10 +87,7 @@ export default function AdminPage() {
       status: payload.status,
       label: payload.label,
     };
-    setIdeas((prev) => {
-      const next = [...prev, idea];
-      return next;
-    });
+    setIdeas((prev) => [...prev, idea]);
   };
 
   const handleAddFolder = () => {
@@ -144,7 +141,9 @@ export default function AdminPage() {
         />
         <div className="col-span-5">
           <AdminIdeaPanel
-            selected={selected}
+            selected={
+              selected && selected.status === activeStatus ? selected : null
+            }
             activeStatus={activeStatus as IdeaStatus}
             processing={processing}
             managerNote={managerNote}
