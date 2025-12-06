@@ -3,6 +3,13 @@
 import { useState } from "react";
 import { motion } from "motion/react";
 import { useDroppable } from "@dnd-kit/core";
+import {
+  useSortable,
+  SortableContext,
+  verticalListSortingStrategy,
+} from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
+import { RiDragMove2Fill } from "react-icons/ri";
 import Folder from "@/components/ui/folder";
 import type { IdeaStatus, IdeaItem, FolderConfig } from "@/lib/mock-data";
 
@@ -59,15 +66,41 @@ function SidebarFolderItem({
   onToggleColorMenu,
   onColorChange,
 }: SidebarFolderItemProps) {
-  const { setNodeRef } = useDroppable({
+  const sortableId = `folder-sort-${folder.id}`;
+  const {
+    setNodeRef: setSortableRef,
+    transform,
+    transition,
+    attributes,
+    listeners,
+    isDragging,
+  } = useSortable({ id: sortableId });
+
+  const { setNodeRef: setDroppableRef, isOver } = useDroppable({
     id: `folder-${folder.id}`,
   });
 
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+  };
+
   return (
-    <div ref={setNodeRef} className="relative flex flex-col items-center">
-      <button type="button" onClick={onChangeStatus} className="relative">
+    <div
+      ref={(node) => {
+        setSortableRef(node);
+        setDroppableRef(node);
+      }}
+      style={style}
+      className="relative flex flex-col items-center"
+    >
+      <button
+        type="button"
+        onClick={onChangeStatus}
+        className={`relative transition ${isDragging ? "opacity-70" : ""}`}
+      >
         <Folder size={1.1} color={folder.color} active={isActive} />
-        {isActive && (
+        {(isActive || isOver) && (
           <motion.div
             layoutId="folder-glow"
             className="absolute inset-0 -z-10 rounded-full bg-[#5227FF]/25 blur-2xl"
@@ -75,7 +108,16 @@ function SidebarFolderItem({
         )}
       </button>
 
-      <div className="mt-3 flex flex-col items-center text-[11px] font-medium text-zinc-400">
+      <button
+        type="button"
+        {...attributes}
+        {...listeners}
+        className="mt-1 flex h-6 w-6 items-center justify-center rounded-full border border-zinc-800 bg-zinc-950 text-[11px] text-zinc-500 transition hover:border-zinc-600 hover:text-zinc-200 active:cursor-grabbing"
+      >
+        <RiDragMove2Fill className="h-3 w-3" />
+      </button>
+
+      <div className="mt-2 flex flex-col items-center text-[11px] font-medium text-zinc-400">
         {isEditing ? (
           <input
             value={draftLabel}
@@ -179,34 +221,39 @@ export function AdminSidebar({
   return (
     <div className="col-span-2 border-r border-zinc-800/60">
       <div className="folders-scroll h-[calc(100vh-120px)] overflow-y-auto pt-8 pb-14">
-        <div className="flex flex-col items-center gap-12">
-          {folders.map((folder) => {
-            const count = getCountForFolder(folder.id as string);
-            const isActive = activeStatus === folder.id;
-            const isEditing = editingId === folder.id;
-            const showColorMenu = colorMenuId === folder.id;
+        <SortableContext
+          items={folders.map((folder) => `folder-sort-${folder.id}`)}
+          strategy={verticalListSortingStrategy}
+        >
+          <div className="flex flex-col items-center gap-12">
+            {folders.map((folder) => {
+              const count = getCountForFolder(folder.id as string);
+              const isActive = activeStatus === folder.id;
+              const isEditing = editingId === folder.id;
+              const showColorMenu = colorMenuId === folder.id;
 
-            return (
-              <SidebarFolderItem
-                key={folder.id}
-                folder={folder}
-                ideaCount={count}
-                isActive={isActive}
-                isEditing={isEditing}
-                draftLabel={draftLabel}
-                onChangeStatus={() => changeStatusAction(folder.id)}
-                onStartEditing={() => startEditing(folder)}
-                onCommitEditing={commitEditing}
-                onDraftChange={setDraftLabel}
-                showColorMenu={showColorMenu}
-                onToggleColorMenu={() => toggleColorMenu(folder.id as string)}
-                onColorChange={(color) =>
-                  handleColorChange(folder.id as string, color)
-                }
-              />
-            );
-          })}
-        </div>
+              return (
+                <SidebarFolderItem
+                  key={folder.id}
+                  folder={folder}
+                  ideaCount={count}
+                  isActive={isActive}
+                  isEditing={isEditing}
+                  draftLabel={draftLabel}
+                  onChangeStatus={() => changeStatusAction(folder.id)}
+                  onStartEditing={() => startEditing(folder)}
+                  onCommitEditing={commitEditing}
+                  onDraftChange={setDraftLabel}
+                  showColorMenu={showColorMenu}
+                  onToggleColorMenu={() => toggleColorMenu(folder.id as string)}
+                  onColorChange={(color) =>
+                    handleColorChange(folder.id as string, color)
+                  }
+                />
+              );
+            })}
+          </div>
+        </SortableContext>
       </div>
     </div>
   );

@@ -122,6 +122,26 @@ export default function AdminPage() {
     setFolders((prev) => prev.map((f) => (f.id === id ? { ...f, color } : f)));
   };
 
+  const handleReorderFolders = (orderedIds: string[]) => {
+    setFolders((prev) => {
+      const byId = new Map(prev.map((f) => [f.id, f]));
+      const next: FolderConfig[] = [];
+
+      orderedIds.forEach((id) => {
+        const folder = byId.get(id);
+        if (folder) next.push(folder);
+      });
+
+      prev.forEach((folder) => {
+        if (!orderedIds.includes(folder.id)) {
+          next.push(folder);
+        }
+      });
+
+      return next;
+    });
+  };
+
   const handleReorderIdeas = (orderedIds: string[]) => {
     setIdeas((prev) => {
       const byId = new Map(prev.map((i) => [i.id, i]));
@@ -188,6 +208,28 @@ export default function AdminPage() {
 
     const activeId = String(active.id);
     const overId = String(over.id);
+
+    if (
+      activeId.startsWith("folder-sort-") &&
+      overId.startsWith("folder-sort-")
+    ) {
+      const activeFolderId = activeId.replace("folder-sort-", "");
+      const overFolderId = overId.replace("folder-sort-", "");
+      if (activeFolderId === overFolderId) return;
+
+      const ids = folders.map((f) => f.id);
+      if (!ids.includes(activeFolderId) || !ids.includes(overFolderId)) return;
+
+      const oldIndex = ids.indexOf(activeFolderId);
+      const newIndex = ids.indexOf(overFolderId);
+      if (oldIndex === -1 || newIndex === -1) return;
+
+      const newOrder = [...ids];
+      const [removed] = newOrder.splice(oldIndex, 1);
+      newOrder.splice(newIndex, 0, removed);
+      handleReorderFolders(newOrder);
+      return;
+    }
 
     const isIdeaDrag = activeId.startsWith("idea-");
     if (!isIdeaDrag) return;
