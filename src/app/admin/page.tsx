@@ -7,6 +7,8 @@ import {
   type IdeaStatus,
   type IdeaItem,
   type FolderConfig,
+  type IdeaLink,
+  type IdeaBullet,
 } from "@/lib/mock-data";
 import { AdminHeader } from "./_components/admin-header";
 import { AdminSidebar } from "./_components/admin-sidebar";
@@ -18,6 +20,15 @@ type SelectedIdea = {
   index: number;
   label: string;
   id: string;
+};
+
+type IdeaDetailsPayload = {
+  id: string;
+  managerSummary: string;
+  managerContent: string;
+  managerLinks: IdeaLink[];
+  managerBullets: IdeaBullet[];
+  managerNote: string;
 };
 
 function generateFolderId(existing: FolderConfig[]): string {
@@ -44,8 +55,6 @@ export default function AdminPage() {
     "INBOX",
   );
   const [selected, setSelected] = useState<SelectedIdea | null>(null);
-  const [processing, setProcessing] = useState(false);
-  const [managerNote, setManagerNote] = useState("");
 
   const filteredIdeas = useMemo(
     () => ideas.filter((idea) => idea.status === activeStatus),
@@ -60,8 +69,6 @@ export default function AdminPage() {
   const handleChangeStatus = (status: IdeaStatus | string) => {
     setActiveStatus(status);
     setSelected(null);
-    setProcessing(false);
-    setManagerNote("");
   };
 
   const handleSelectIdea = (payload: { item: string; index: number }) => {
@@ -73,8 +80,6 @@ export default function AdminPage() {
       label: item.label,
       id: item.id,
     });
-    setProcessing(false);
-    setManagerNote("");
   };
 
   const handleAddIdea = (payload: {
@@ -86,6 +91,11 @@ export default function AdminPage() {
       id: newId,
       status: payload.status,
       label: payload.label,
+      managerSummary: "",
+      managerContent: "",
+      managerLinks: [],
+      managerBullets: [],
+      managerNote: "",
     };
     setIdeas((prev) => [...prev, idea]);
   };
@@ -100,19 +110,37 @@ export default function AdminPage() {
     setFolders((prev) => [...prev, folder]);
     setActiveStatus(newId);
     setSelected(null);
-    setProcessing(false);
-    setManagerNote("");
   };
 
   const handleRenameFolder = (id: string, label: string) => {
     setFolders((prev) => prev.map((f) => (f.id === id ? { ...f, label } : f)));
   };
 
+  const handleUpdateIdeaDetails = (payload: IdeaDetailsPayload) => {
+    setIdeas((prev) =>
+      prev.map((idea) =>
+        idea.id === payload.id
+          ? {
+              ...idea,
+              managerSummary: payload.managerSummary,
+              managerContent: payload.managerContent,
+              managerLinks: payload.managerLinks,
+              managerBullets: payload.managerBullets,
+              managerNote: payload.managerNote,
+            }
+          : idea,
+      ),
+    );
+  };
+
   const handleClearSelection = () => {
     setSelected(null);
-    setProcessing(false);
-    setManagerNote("");
   };
+
+  const selectedIdeaData =
+    selected && selected.status === activeStatus
+      ? ideas.find((i) => i.id === selected.id) || null
+      : null;
 
   return (
     <div className="min-h-screen bg-[#050509] px-8 py-10 text-white">
@@ -123,7 +151,7 @@ export default function AdminPage() {
         archiveCount={archiveCount}
       />
 
-      <div className="grid h-[640px] grid-cols-12 gap-8">
+      <div className="mt-6 grid h-[calc(100vh-160px)] grid-cols-12 gap-8">
         <AdminSidebar
           folders={folders}
           ideas={ideas}
@@ -139,16 +167,16 @@ export default function AdminPage() {
           addIdeaAction={handleAddIdea}
           addFolderAction={handleAddFolder}
         />
-        <div className="col-span-5">
+        <div className="col-span-5 h-full overflow-y-auto">
           <AdminIdeaPanel
-            selected={
-              selected && selected.status === activeStatus ? selected : null
-            }
+            selected={selected}
             activeStatus={activeStatus as IdeaStatus}
-            processing={processing}
-            managerNote={managerNote}
-            processingAction={setProcessing}
-            managerNoteAction={setManagerNote}
+            managerSummary={selectedIdeaData?.managerSummary ?? ""}
+            managerContent={selectedIdeaData?.managerContent ?? ""}
+            managerLinks={selectedIdeaData?.managerLinks ?? []}
+            managerBullets={selectedIdeaData?.managerBullets ?? []}
+            managerNote={selectedIdeaData?.managerNote ?? ""}
+            updateIdeaDetailsAction={handleUpdateIdeaDetails}
             clearSelectionAction={handleClearSelection}
           />
         </div>

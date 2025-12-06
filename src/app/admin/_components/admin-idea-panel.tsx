@@ -1,9 +1,11 @@
 "use client";
 
 import { useMemo } from "react";
+import { FaNoteSticky } from "react-icons/fa6";
 import ClickSpark from "@/components/ui/click-spark";
-import Stepper, { Step } from "@/components/ui/stepper";
-import type { IdeaStatus } from "@/lib/mock-data";
+import type { IdeaStatus, IdeaLink, IdeaBullet } from "@/lib/mock-data";
+import { IdeaBulletsEditor } from "./idea-bullets-editor";
+import { IdeaLinksEditor } from "./idea-links-editor";
 
 type AdminIdeaPanelProps = {
   selected: {
@@ -13,10 +15,19 @@ type AdminIdeaPanelProps = {
     id: string;
   } | null;
   activeStatus: IdeaStatus;
-  processing: boolean;
+  managerSummary: string;
+  managerContent: string;
+  managerLinks: IdeaLink[];
+  managerBullets: IdeaBullet[];
   managerNote: string;
-  processingAction: (_: boolean) => void;
-  managerNoteAction: (_: string) => void;
+  updateIdeaDetailsAction: (_: {
+    id: string;
+    managerSummary: string;
+    managerContent: string;
+    managerLinks: IdeaLink[];
+    managerBullets: IdeaBullet[];
+    managerNote: string;
+  }) => void;
   clearSelectionAction: () => void;
 };
 
@@ -25,10 +36,12 @@ const PANEL_HEIGHT_CLASS = "h-[960px]";
 export function AdminIdeaPanel({
   selected,
   activeStatus,
-  processing,
+  managerSummary,
+  managerContent,
+  managerLinks,
+  managerBullets,
   managerNote,
-  processingAction,
-  managerNoteAction,
+  updateIdeaDetailsAction,
   clearSelectionAction,
 }: AdminIdeaPanelProps) {
   const currentLabel =
@@ -41,14 +54,14 @@ export function AdminIdeaPanel({
     return currentLabel.slice(0, end + 1);
   }, [currentLabel]);
 
-  const currentText = useMemo(() => {
+  const currentTitle = useMemo(() => {
     if (!currentLabel) return "";
     const end = currentLabel.indexOf("]");
     if (end === -1) return currentLabel;
     return currentLabel.slice(end + 1).trim();
   }, [currentLabel]);
 
-  if (!currentLabel) {
+  if (!currentLabel || !selected) {
     return (
       <div className="flex h-full w-full">
         <div
@@ -59,7 +72,8 @@ export function AdminIdeaPanel({
               ⚡
             </div>
             <div className="text-sm text-zinc-300">
-              Sélectionnez une idée dans la liste pour la traiter
+              Sélectionne une idée à gauche pour ouvrir son espace
+              d&apos;édition.
             </div>
           </div>
         </div>
@@ -67,15 +81,36 @@ export function AdminIdeaPanel({
     );
   }
 
-  if (!processing) {
-    return (
-      <div className="flex h-full w-full">
-        <div
-          className={`w-full max-w-[960px] rounded-3xl border border-zinc-900 bg-[#060010] px-10 py-6 shadow-[0_0_40px_rgba(0,0,0,0.5)] ${PANEL_HEIGHT_CLASS}`}
-        >
-          <div className="flex h-full flex-col">
-            <div className="flex-1 overflow-y-auto pr-2">
-              <div className="flex items-center justify-between gap-3">
+  const pushUpdate = (partial: {
+    managerSummary?: string;
+    managerContent?: string;
+    managerLinks?: IdeaLink[];
+    managerBullets?: IdeaBullet[];
+    managerNote?: string;
+  }) => {
+    updateIdeaDetailsAction({
+      id: selected.id,
+      managerSummary: partial.managerSummary ?? managerSummary,
+      managerContent: partial.managerContent ?? managerContent,
+      managerLinks: partial.managerLinks ?? managerLinks,
+      managerBullets: partial.managerBullets ?? managerBullets,
+      managerNote: partial.managerNote ?? managerNote,
+    });
+  };
+
+  const handleSave = () => {
+    pushUpdate({});
+  };
+
+  return (
+    <div className="flex h-full w-full">
+      <div
+        className={`w-full max-w-[960px] rounded-3xl border border-zinc-900 bg-[#060010] px-10 py-6 shadow-[0_0_40px_rgba(0,0,0,0.5)] ${PANEL_HEIGHT_CLASS}`}
+      >
+        <div className="flex h-full flex-col">
+          <div className="panel-scroll flex-1 overflow-y-auto">
+            <div className="pr-2">
+              <div className="flex items-start justify-between gap-3">
                 <div className="flex flex-col gap-2">
                   {currentTgi && (
                     <div className="inline-flex items-center gap-2 rounded-full bg-[#111827] px-3 py-1 text-[11px] font-mono text-indigo-300">
@@ -98,112 +133,85 @@ export function AdminIdeaPanel({
                 </div>
               </div>
 
-              <h3 className="mt-4 text-lg font-semibold leading-snug">
-                {currentText}
-              </h3>
+              <h1 className="mt-6 text-xl font-semibold leading-snug text-zinc-50">
+                {currentTitle}
+              </h1>
 
-              <div className="mt-4 grid grid-cols-3 gap-3 text-[11px]">
-                <div className="rounded-lg bg-zinc-900 px-3 py-2 text-zinc-400">
-                  Impact: moyen
+              <div className="mt-8 space-y-6">
+                <div className="rounded-2xl border border-zinc-900 bg-[#050012] px-4 py-4">
+                  <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-zinc-500">
+                    Résumé rapide
+                  </div>
+                  <input
+                    type="text"
+                    className="mt-3 w-full rounded-lg border border-zinc-800 bg-zinc-950 px-3 py-2 text-sm text-zinc-100 focus:border-[#5227FF] focus:outline-none"
+                    value={managerSummary}
+                    onChange={(e) =>
+                      pushUpdate({ managerSummary: e.target.value })
+                    }
+                    placeholder="En une phrase: pourquoi cette idée, pour qui, et l'effet attendu."
+                  />
                 </div>
-                <div className="rounded-lg bg-zinc-900 px-3 py-2 text-zinc-400">
-                  Complexité: faible
+
+                <div className="rounded-2xl border border-zinc-900 bg-[#050012] px-4 py-4">
+                  <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-zinc-500">
+                    Détail de l&apos;idée
+                  </div>
+                  <textarea
+                    className="mt-3 h-40 w-full resize-none rounded-lg border border-zinc-800 bg-zinc-950 px-4 py-3 text-sm text-zinc-100 focus:border-[#5227FF] focus:outline-none"
+                    value={managerContent}
+                    onChange={(e) =>
+                      pushUpdate({ managerContent: e.target.value })
+                    }
+                    placeholder="Décris le contexte, le problème, la solution envisagée, des exemples, des liens Notion / Loom..."
+                  />
                 </div>
-                <div className="rounded-lg bg-zinc-900 px-3 py-2 text-zinc-400">
-                  Horizon: Q3/Q4
+
+                <IdeaBulletsEditor
+                  bullets={managerBullets}
+                  onChange={(next) => pushUpdate({ managerBullets: next })}
+                />
+
+                <IdeaLinksEditor
+                  links={managerLinks}
+                  onChange={(next) => pushUpdate({ managerLinks: next })}
+                />
+
+                <div className="rounded-2xl border border-zinc-900 bg-[#050012] px-4 py-4">
+                  <div className="mb-2 flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.18em] text-zinc-500">
+                    <FaNoteSticky className="h-3 w-3 text-zinc-600" />
+                    <span>Notes internes</span>
+                  </div>
+                  <textarea
+                    className="mt-1 h-24 w-full resize-none rounded-lg border border-zinc-800 bg-zinc-950 px-4 py-3 text-sm text-zinc-100 focus:border-[#5227FF] focus:outline-none"
+                    value={managerNote}
+                    onChange={(e) =>
+                      pushUpdate({ managerNote: e.target.value })
+                    }
+                    placeholder="Pour toi ou l'équipe core: décisions, inconnues, risques, choses à vérifier..."
+                  />
                 </div>
               </div>
             </div>
+          </div>
 
-            <div className="mt-4 flex gap-3 pt-2">
+          <div className="mt-4 flex gap-3 pt-2">
+            <button
+              type="button"
+              className="flex-1 rounded-lg border border-zinc-700 bg-zinc-950 px-3 py-2 text-sm text-zinc-400 transition hover:bg-zinc-900"
+              onClick={clearSelectionAction}
+            >
+              Archiver
+            </button>
+            <ClickSpark sparkColor="#ffffff" sparkCount={10}>
               <button
                 type="button"
-                className="flex-1 rounded-lg border border-zinc-700 bg-zinc-950 px-3 py-2 text-sm text-zinc-400 transition hover:bg-zinc-900"
-                onClick={clearSelectionAction}
+                onClick={handleSave}
+                className="flex-1 rounded-lg bg-[#5227FF] px-3 py-2 text-sm font-medium text-white transition hover:bg-[#3f21c9]"
               >
-                Archiver
+                Enregistrer
               </button>
-              <ClickSpark sparkColor="#ffffff" sparkCount={10}>
-                <button
-                  type="button"
-                  onClick={() => processingAction(true)}
-                  className="flex-1 rounded-lg bg-[#5227FF] px-3 py-2 text-sm font-medium text-white transition hover:bg-[#3f21c9]"
-                >
-                  Traiter
-                </button>
-              </ClickSpark>
-            </div>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  return (
-    <div className="flex h-full w-full">
-      <div
-        className={`w-full max-w-[960px] rounded-3xl border border-zinc-900 bg-[#060010] px-10 py-6 shadow-[0_0_40px_rgba(0,0,0,0.5)] ${PANEL_HEIGHT_CLASS}`}
-      >
-        <div className="flex h-full flex-col">
-          <div className="flex-1 overflow-y-auto pr-2">
-            <Stepper
-              initialStep={1}
-              onFinalStepCompleted={() => {
-                processingAction(false);
-                clearSelectionAction();
-                managerNoteAction("");
-              }}
-              backButtonText="Retour"
-              nextButtonText="Suivant"
-              stepCircleContainerClassName="bg-[#060010]"
-              contentClassName="pt-4"
-              footerClassName="pt-2"
-              nextButtonProps={{
-                className:
-                  "duration-300 rounded-full bg-[#5227FF] px-4 py-2 text-sm font-medium text-white hover:bg-[#3f21c9]",
-              }}
-              backButtonProps={{
-                className:
-                  "px-3 py-1 text-sm text-zinc-400 hover:text-zinc-100",
-              }}
-            >
-              <Step>
-                <h2 className="mb-2 text-lg font-semibold">Qualification</h2>
-                <p className="mb-4 text-sm text-zinc-400">
-                  Décide si cette idée mérite d&apos;entrer dans le flux équipe.
-                </p>
-                <div className="space-y-2 text-sm text-zinc-300">
-                  <div className="rounded-lg bg-zinc-900 px-3 py-2">
-                    Impact perçu: moyen
-                  </div>
-                  <div className="rounded-lg bg-zinc-900 px-3 py-2">
-                    Complexité: faible
-                  </div>
-                </div>
-              </Step>
-              <Step>
-                <h2 className="mb-2 text-lg font-semibold">Reformulation</h2>
-                <p className="mb-4 text-sm text-zinc-400">
-                  Reformule pour que l&apos;équipe comprenne rapidement.
-                </p>
-                <textarea
-                  className="h-28 w-full rounded-lg border border-zinc-800 bg-zinc-950 px-3 py-2 text-sm focus:border-[#5227FF] focus:outline-none"
-                  defaultValue={currentText}
-                />
-              </Step>
-              <Step>
-                <h2 className="mb-2 text-lg font-semibold">Note interne</h2>
-                <p className="mb-4 text-sm text-zinc-400">
-                  Ajoute une note personnelle avant diffusion.
-                </p>
-                <textarea
-                  className="h-24 w-full rounded-lg border border-zinc-800 bg-zinc-950 px-3 py-2 text-sm focus:border-[#5227FF] focus:outline-none"
-                  value={managerNote}
-                  onChange={(e) => managerNoteAction(e.target.value)}
-                  placeholder="Ex: à revoir avec l'équipe infra avant diffusion."
-                />
-              </Step>
-            </Stepper>
+            </ClickSpark>
           </div>
         </div>
       </div>

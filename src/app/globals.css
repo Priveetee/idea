@@ -152,3 +152,25 @@ body {
   color: #f9fafb;
   overflow: hidden;
 }
+
+.panel-scroll {
+  scrollbar-width: thin;
+  scrollbar-color: #4b5563 transparent;
+}
+
+.panel-scroll::-webkit-scrollbar {
+  width: 6px;
+}
+
+.panel-scroll::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.panel-scroll::-webkit-scrollbar-thumb {
+  background: #4b5563;
+  border-radius: 9999px;
+}
+
+.panel-scroll::-webkit-scrollbar-thumb:hover {
+  background: #6b7280;
+}
