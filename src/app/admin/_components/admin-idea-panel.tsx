@@ -32,8 +32,6 @@ type AdminIdeaPanelProps = {
   clearSelectionAction: () => void;
 };
 
-const PANEL_HEIGHT_CLASS = "h-[960px]";
-
 export function AdminIdeaPanel({
   selected,
   activeStatus,
@@ -67,9 +65,7 @@ export function AdminIdeaPanel({
   if (!currentLabel || !selected) {
     return (
       <div className="flex h-full w-full">
-        <div
-          className={`w-full max-w-[960px] rounded-3xl border border-zinc-900 bg-[#060010] px-10 py-8 shadow-[0_0_40px_rgba(0,0,0,0.5)] ${PANEL_HEIGHT_CLASS}`}
-        >
+        <div className="flex w-full max-w-[960px] flex-col items-center justify-center rounded-3xl border border-zinc-900 bg-[#060010] px-10 py-8 shadow-[0_0_40px_rgba(0,0,0,0.5)] max-h-[calc(100vh-220px)]">
           <div className="flex h-full flex-col items-center justify-center gap-4">
             <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-zinc-900 text-2xl">
               ⚡
@@ -117,139 +113,131 @@ export function AdminIdeaPanel({
 
   return (
     <div className="flex h-full w-full">
-      <div
-        className={`w-full max-w-[960px] rounded-3xl border border-zinc-900 bg-[#060010] px-10 py-6 shadow-[0_0_40px_rgba(0,0,0,0.5)] ${PANEL_HEIGHT_CLASS}`}
-      >
-        <div className="flex h-full flex-col">
-          <div className="panel-scroll flex-1 overflow-y-auto">
-            <div className="pr-2">
-              {mode === "view" ? (
-                <IdeaReadView
-                  titleLabel={currentTitle}
-                  tgiLabel={currentTgi}
-                  activeStatus={activeStatus}
-                  managerSummary={managerSummary}
-                  managerContent={managerContent}
-                  managerBullets={managerBullets}
-                  managerLinks={managerLinks}
-                  managerNote={managerNote}
-                />
-              ) : (
-                <div className="space-y-6">
-                  <div className="flex items-start justify-between gap-3">
-                    <div className="flex flex-col gap-2">
-                      {currentTgi && (
-                        <div className="inline-flex items-center gap-2 rounded-full bg-[#111827] px-3 py-1 text-[11px] font-mono text-indigo-300">
-                          <span
-                            className="h-1.5 w-1.5 rounded-full"
-                            style={{ backgroundColor: "#5227FF" }}
-                          />
-                          {currentTgi}
-                        </div>
-                      )}
-                      <div className="text-[11px] uppercase tracking-[0.15em] text-zinc-500">
-                        Statut espace: {activeStatus}
-                      </div>
+      <div className="flex w-full max-w-[960px] flex-col rounded-3xl border border-zinc-900 bg-[#060010] px-10 py-6 shadow-[0_0_40px_rgba(0,0,0,0.5)] max-h-[calc(100vh-220px)]">
+        <div className="panel-scroll flex-1 overflow-y-auto pr-2">
+          {mode === "view" ? (
+            <IdeaReadView
+              titleLabel={currentTitle}
+              tgiLabel={currentTgi}
+              activeStatus={activeStatus}
+              managerSummary={managerSummary}
+              managerContent={managerContent}
+              managerBullets={managerBullets}
+              managerLinks={managerLinks}
+              managerNote={managerNote}
+            />
+          ) : (
+            <div className="space-y-6">
+              <div className="flex items-start justify-between gap-3">
+                <div className="flex flex-col gap-2">
+                  {currentTgi && (
+                    <div className="inline-flex items-center gap-2 rounded-full bg-[#111827] px-3 py-1 text-[11px] font-mono text-indigo-300">
+                      <span
+                        className="h-1.5 w-1.5 rounded-full"
+                        style={{ backgroundColor: "#5227FF" }}
+                      />
+                      {currentTgi}
                     </div>
-                    <div className="flex flex-col items-end text-[11px] text-zinc-500">
-                      <span>Origine: Lien unique TGI</span>
-                      <span className="mt-0.5 opacity-70">
-                        Flux: mockdata admin
-                      </span>
-                    </div>
-                  </div>
-
-                  <h1 className="text-xl font-semibold leading-snug text-zinc-50">
-                    {currentTitle}
-                  </h1>
-
-                  <div className="rounded-2xl border border-zinc-900 bg-[#050012] px-4 py-4">
-                    <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-zinc-500">
-                      Résumé rapide
-                    </div>
-                    <input
-                      type="text"
-                      className="mt-3 w-full rounded-lg border border-zinc-800 bg-zinc-950 px-3 py-2 text-sm text-zinc-100 focus:border-[#5227FF] focus:outline-none"
-                      value={managerSummary}
-                      onChange={(e) =>
-                        pushUpdate({ managerSummary: e.target.value })
-                      }
-                      placeholder="En une phrase: pourquoi cette idée, pour qui, et l'effet attendu."
-                    />
-                  </div>
-
-                  <div className="rounded-2xl border border-zinc-900 bg-[#050012] px-4 py-4">
-                    <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-zinc-500">
-                      Détail de l&apos;idée
-                    </div>
-                    <textarea
-                      className="mt-3 h-40 w-full resize-none rounded-lg border border-zinc-800 bg-zinc-950 px-4 py-3 text-sm text-zinc-100 focus:border-[#5227FF] focus:outline-none"
-                      value={managerContent}
-                      onChange={(e) =>
-                        pushUpdate({ managerContent: e.target.value })
-                      }
-                      placeholder="Décris le contexte, le problème, la solution envisagée, des exemples, des liens Notion / Loom..."
-                    />
-                  </div>
-
-                  <IdeaBulletsEditor
-                    bullets={managerBullets}
-                    onChange={(next) => pushUpdate({ managerBullets: next })}
-                  />
-
-                  <IdeaLinksEditor
-                    links={managerLinks}
-                    onChange={(next) => pushUpdate({ managerLinks: next })}
-                  />
-
-                  <div className="rounded-2xl border border-zinc-900 bg-[#050012] px-4 py-4">
-                    <div className="mb-2 flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.18em] text-zinc-500">
-                      <FaNoteSticky className="h-3 w-3 text-zinc-600" />
-                      <span>Notes internes</span>
-                    </div>
-                    <textarea
-                      className="mt-1 h-24 w-full resize-none rounded-lg border border-zinc-800 bg-zinc-950 px-4 py-3 text-sm text-zinc-100 focus:border-[#5227FF] focus:outline-none"
-                      value={managerNote}
-                      onChange={(e) =>
-                        pushUpdate({ managerNote: e.target.value })
-                      }
-                      placeholder="Pour toi ou l'équipe core: décisions, inconnues, risques, choses à vérifier..."
-                    />
+                  )}
+                  <div className="text-[11px] uppercase tracking-[0.15em] text-zinc-500">
+                    Statut espace: {activeStatus}
                   </div>
                 </div>
-              )}
-            </div>
-          </div>
+                <div className="flex flex-col items-end text-[11px] text-zinc-500">
+                  <span>Origine: Lien unique TGI</span>
+                  <span className="mt-0.5 opacity-70">
+                    Flux: mockdata admin
+                  </span>
+                </div>
+              </div>
 
-          <div className="mt-4 flex gap-3 pt-2">
+              <h1 className="text-xl font-semibold leading-snug text-zinc-50">
+                {currentTitle}
+              </h1>
+
+              <div className="rounded-2xl border border-zinc-900 bg-zinc-950/80 px-4 py-3">
+                <div className="mb-2 text-[11px] font-semibold uppercase tracking-[0.18em] text-zinc-400">
+                  Résumé rapide
+                </div>
+                <input
+                  type="text"
+                  className="w-full rounded-lg border border-zinc-800 bg-zinc-950 px-3 py-2 text-sm text-zinc-100 focus:border-[#5227FF] focus:outline-none"
+                  value={managerSummary}
+                  onChange={(e) =>
+                    pushUpdate({ managerSummary: e.target.value })
+                  }
+                  placeholder="En une phrase: pourquoi cette idée, pour qui, et l'effet attendu."
+                />
+              </div>
+
+              <div className="rounded-2xl border border-zinc-900 bg-zinc-950/80 px-4 py-3">
+                <div className="mb-2 text-[11px] font-semibold uppercase tracking-[0.18em] text-zinc-400">
+                  Détail de l&apos;idée
+                </div>
+                <textarea
+                  className="h-40 w-full resize-none rounded-lg border border-zinc-800 bg-zinc-950 px-4 py-3 text-sm text-zinc-100 focus:border-[#5227FF] focus:outline-none"
+                  value={managerContent}
+                  onChange={(e) =>
+                    pushUpdate({ managerContent: e.target.value })
+                  }
+                  placeholder="Décris le contexte, le problème, la solution envisagée, des exemples, des liens Notion / Loom..."
+                />
+              </div>
+
+              <IdeaBulletsEditor
+                bullets={managerBullets}
+                onChange={(next) => pushUpdate({ managerBullets: next })}
+              />
+
+              <IdeaLinksEditor
+                links={managerLinks}
+                onChange={(next) => pushUpdate({ managerLinks: next })}
+              />
+
+              <div className="rounded-2xl border border-zinc-900 bg-zinc-950/80 px-4 py-3">
+                <div className="mb-2 flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.18em] text-zinc-400">
+                  <FaNoteSticky className="h-3 w-3 text-zinc-600" />
+                  <span>Notes internes</span>
+                </div>
+                <textarea
+                  className="h-24 w-full resize-none rounded-lg border border-zinc-800 bg-zinc-950 px-4 py-3 text-sm text-zinc-100 focus:border-[#5227FF] focus:outline-none"
+                  value={managerNote}
+                  onChange={(e) => pushUpdate({ managerNote: e.target.value })}
+                  placeholder="Pour toi ou l'équipe core: décisions, inconnues, risques, choses à vérifier..."
+                />
+              </div>
+            </div>
+          )}
+        </div>
+
+        <div className="mt-4 flex shrink-0 gap-3 pt-2">
+          <button
+            type="button"
+            className="flex-1 rounded-lg border border-zinc-700 bg-zinc-950 px-3 py-2 text-sm text-zinc-400 transition hover:bg-zinc-900"
+            onClick={handleClear}
+          >
+            Archiver
+          </button>
+
+          {mode === "view" ? (
             <button
               type="button"
-              className="flex-1 rounded-lg border border-zinc-700 bg-zinc-950 px-3 py-2 text-sm text-zinc-400 transition hover:bg-zinc-900"
-              onClick={handleClear}
+              onClick={handleSwitchToEdit}
+              className="flex-1 rounded-lg border border-[#4f46e5] bg-transparent px-3 py-2 text-sm font-medium text-[#a5b4fc] transition hover:bg-[#111827]"
             >
-              Archiver
+              Modifier
             </button>
-
-            {mode === "view" ? (
+          ) : (
+            <ClickSpark sparkColor="#ffffff" sparkCount={10}>
               <button
                 type="button"
-                onClick={handleSwitchToEdit}
-                className="flex-1 rounded-lg border border-[#4f46e5] bg-transparent px-3 py-2 text-sm font-medium text-[#a5b4fc] transition hover:bg-[#111827]"
+                onClick={handleSave}
+                className="flex-1 rounded-lg bg-[#5227FF] px-3 py-2 text-sm font-medium text-white transition hover:bg-[#3f21c9]"
               >
-                Modifier
+                Enregistrer
               </button>
-            ) : (
-              <ClickSpark sparkColor="#ffffff" sparkCount={10}>
-                <button
-                  type="button"
-                  onClick={handleSave}
-                  className="flex-1 rounded-lg bg-[#5227FF] px-3 py-2 text-sm font-medium text-white transition hover:bg-[#3f21c9]"
-                >
-                  Enregistrer
-                </button>
-              </ClickSpark>
-            )}
-          </div>
+            </ClickSpark>
+          )}
         </div>
       </div>
     </div>

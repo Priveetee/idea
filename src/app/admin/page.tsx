@@ -143,45 +143,49 @@ export default function AdminPage() {
       : null;
 
   return (
-    <div className="min-h-screen bg-[#050509] px-8 py-10 text-white">
-      <AdminHeader
-        totalIdeas={totalIdeas}
-        inboxCount={inboxCount}
-        devCount={devCount}
-        archiveCount={archiveCount}
-      />
+    <div className="min-h-screen bg-[#050509] text-white">
+      <div className="mx-auto flex min-h-screen w-full max-w-[1440px] flex-col px-8 py-10">
+        <AdminHeader
+          totalIdeas={totalIdeas}
+          inboxCount={inboxCount}
+          devCount={devCount}
+          archiveCount={archiveCount}
+        />
 
-      <div className="mt-6 grid h-[calc(100vh-160px)] grid-cols-12 gap-8">
-        <AdminSidebar
-          folders={folders}
-          ideas={ideas}
-          activeStatus={activeStatus}
-          changeStatusAction={handleChangeStatus}
-          renameFolderAction={({ id, label }) => handleRenameFolder(id, label)}
-          changeFolderColorAction={({ id, color }) =>
-            handleChangeFolderColor(id, color)
-          }
-        />
-        <AdminIdeaList
-          activeStatus={activeStatus}
-          folders={folders}
-          items={filteredIdeas}
-          selectAction={handleSelectIdea}
-          addIdeaAction={handleAddIdea}
-          addFolderAction={handleAddFolder}
-        />
-        <div className="col-span-5 h-full overflow-y-auto">
-          <AdminIdeaPanel
-            selected={selected}
-            activeStatus={activeStatus as IdeaStatus}
-            managerSummary={selectedIdeaData?.managerSummary ?? ""}
-            managerContent={selectedIdeaData?.managerContent ?? ""}
-            managerLinks={selectedIdeaData?.managerLinks ?? []}
-            managerBullets={selectedIdeaData?.managerBullets ?? []}
-            managerNote={selectedIdeaData?.managerNote ?? ""}
-            updateIdeaDetailsAction={handleUpdateIdeaDetails}
-            clearSelectionAction={handleClearSelection}
+        <div className="mt-6 grid h-[calc(100vh-160px)] grid-cols-12 gap-8 text-[13px] leading-relaxed">
+          <AdminSidebar
+            folders={folders}
+            ideas={ideas}
+            activeStatus={activeStatus}
+            changeStatusAction={handleChangeStatus}
+            renameFolderAction={({ id, label }) =>
+              handleRenameFolder(id, label)
+            }
+            changeFolderColorAction={({ id, color }) =>
+              handleChangeFolderColor(id, color)
+            }
           />
+          <AdminIdeaList
+            activeStatus={activeStatus}
+            folders={folders}
+            items={filteredIdeas}
+            selectAction={handleSelectIdea}
+            addIdeaAction={handleAddIdea}
+            addFolderAction={handleAddFolder}
+          />
+          <div className="col-span-5 h-full overflow-y-auto">
+            <AdminIdeaPanel
+              selected={selected}
+              activeStatus={activeStatus as IdeaStatus}
+              managerSummary={selectedIdeaData?.managerSummary ?? ""}
+              managerContent={selectedIdeaData?.managerContent ?? ""}
+              managerLinks={selectedIdeaData?.managerLinks ?? []}
+              managerBullets={selectedIdeaData?.managerBullets ?? []}
+              managerNote={selectedIdeaData?.managerNote ?? ""}
+              updateIdeaDetailsAction={handleUpdateIdeaDetails}
+              clearSelectionAction={handleClearSelection}
+            />
+          </div>
         </div>
       </div>
     </div>
