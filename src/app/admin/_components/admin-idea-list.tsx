@@ -27,6 +27,14 @@ type AdminIdeaListProps = {
   addFolderAction: () => void;
 };
 
+type SortMode = "recent" | "oldest" | "alpha";
+
+const SORT_MODE_LABEL: Record<SortMode, string> = {
+  recent: "Plus récent",
+  oldest: "Plus ancien",
+  alpha: "Titre A → Z",
+};
+
 export function AdminIdeaList({
   activeStatus,
   folders,
@@ -35,9 +43,11 @@ export function AdminIdeaList({
   addIdeaAction,
   addFolderAction,
 }: AdminIdeaListProps) {
-  const [filterOpen, setFilterOpen] = useState(false);
+  const [sortMode, setSortMode] = useState<SortMode>("recent");
+  const [filterMenuOpen, setFilterMenuOpen] = useState(false);
   const [query, setQuery] = useState("");
   const [creationOpen, setCreationOpen] = useState(false);
+
   const menuRef = useRef<HTMLDivElement | null>(null);
 
   const color = getFolderColor(activeStatus, folders);
@@ -47,7 +57,7 @@ export function AdminIdeaList({
     const handler = (e: MouseEvent) => {
       if (!menuRef.current) return;
       if (!menuRef.current.contains(e.target as Node)) {
-        setFilterOpen(false);
+        setFilterMenuOpen(false);
       }
     };
     window.addEventListener("mousedown", handler);
@@ -55,11 +65,20 @@ export function AdminIdeaList({
   }, []);
 
   const sorted = useMemo(() => {
-    const base = [...items].sort((a, b) => Number(b.id) - Number(a.id));
-    if (!query.trim()) return base;
+    const base = [...items];
+
+    const withIdSort =
+      sortMode === "recent"
+        ? base.sort((a, b) => Number(b.id) - Number(a.id))
+        : sortMode === "oldest"
+          ? base.sort((a, b) => Number(a.id) - Number(b.id))
+          : base.sort((a, b) => a.label.localeCompare(b.label));
+
+    if (!query.trim()) return withIdSort;
+
     const q = query.toLowerCase();
-    return base.filter((i) => i.label.toLowerCase().includes(q));
-  }, [items, query]);
+    return withIdSort.filter((i) => i.label.toLowerCase().includes(q));
+  }, [items, query, sortMode]);
 
   const displayItems: AnimatedListItem[] = sorted.map((i) => {
     const l = i.label;
@@ -72,6 +91,11 @@ export function AdminIdeaList({
 
   const handleItemSelect = (item: AnimatedListItem, index: number) => {
     selectAction({ item: item.label, index });
+  };
+
+  const handleSelectSortMode = (mode: SortMode) => {
+    setSortMode(mode);
+    setFilterMenuOpen(false);
   };
 
   return (
@@ -90,23 +114,62 @@ export function AdminIdeaList({
             className="inline-flex h-2 w-2 rounded-full"
             style={{ backgroundColor: color }}
           />
-          <span className="text-sm font-medium text-zinc-300">{label}</span>
+          <div className="flex flex-col">
+            <span className="text-sm font-medium text-zinc-300">{label}</span>
+            <span className="text-[11px] text-zinc-500">
+              {displayItems.length} idée(s)
+            </span>
+          </div>
         </div>
+
         <div className="flex items-center gap-2 text-[11px] text-zinc-500">
           <div className="relative" ref={menuRef}>
             <button
               type="button"
-              onClick={() => setFilterOpen((x) => !x)}
-              className={`flex h-7 items-center gap-2 rounded-full border px-3 transition ${
-                filterOpen
+              onClick={() => setFilterMenuOpen((x) => !x)}
+              className={`flex h-7 items-center gap-2 rounded-full border px-3 text-[11px] transition ${
+                filterMenuOpen
                   ? "border-[#5227FF] bg-[#5227FF]/10 text-zinc-100"
                   : "border-zinc-700 bg-zinc-900 text-zinc-400 hover:border-zinc-500"
               }`}
             >
               <FaFilter className="h-3 w-3" />
-              <span>Récent</span>
+              <span>{SORT_MODE_LABEL[sortMode]}</span>
             </button>
+
+            {filterMenuOpen && (
+              <div className="absolute right-0 z-20 mt-2 w-40 rounded-2xl border border-zinc-800 bg-[#050509] py-1 text-[11px] text-zinc-200 shadow-xl">
+                <button
+                  type="button"
+                  onClick={() => handleSelectSortMode("recent")}
+                  className={`flex w-full items-center px-3 py-1.5 text-left hover:bg-zinc-900 ${
+                    sortMode === "recent" ? "text-zinc-50" : ""
+                  }`}
+                >
+                  Plus récent
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleSelectSortMode("oldest")}
+                  className={`flex w-full items-center px-3 py-1.5 text-left hover:bg-zinc-900 ${
+                    sortMode === "oldest" ? "text-zinc-50" : ""
+                  }`}
+                >
+                  Plus ancien
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleSelectSortMode("alpha")}
+                  className={`flex w-full items-center px-3 py-1.5 text-left hover:bg-zinc-900 ${
+                    sortMode === "alpha" ? "text-zinc-50" : ""
+                  }`}
+                >
+                  Titre A → Z
+                </button>
+              </div>
+            )}
           </div>
+
           <input
             value={query}
             onChange={(e) => setQuery(e.target.value)}
