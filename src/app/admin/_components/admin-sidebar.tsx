@@ -7,6 +7,7 @@ import {
 } from "@dnd-kit/sortable";
 import type { IdeaStatus, IdeaItem, FolderConfig } from "@/lib/mock-data";
 import { SidebarFolderItem } from "./sidebar-folder-item";
+import { AdminDeleteFolderModal } from "./admin-delete-folder-modal";
 
 type AdminSidebarProps = {
   folders: FolderConfig[];
@@ -33,9 +34,7 @@ export function AdminSidebar({
   const [draftLabel, setDraftLabel] = useState("");
   const [colorMenuId, setColorMenuId] = useState<string | null>(null);
   const [actionsMenuId, setActionsMenuId] = useState<string | null>(null);
-  const [deleteStepById, setDeleteStepById] = useState<
-    Record<string, "idle" | "confirm">
-  >({});
+  const [deleteTargetId, setDeleteTargetId] = useState<string | null>(null);
 
   const getCountForFolder = (folderId: string) =>
     ideas.filter((idea) => idea.status === folderId).length;
@@ -45,7 +44,6 @@ export function AdminSidebar({
     setDraftLabel(folder.label);
     setColorMenuId(null);
     setActionsMenuId(null);
-    setDeleteStepById({});
   };
 
   const commitEditing = () => {
@@ -60,7 +58,6 @@ export function AdminSidebar({
   const toggleColorMenu = (id: string) => {
     setColorMenuId((current) => (current === id ? null : id));
     setActionsMenuId(null);
-    setDeleteStepById({});
   };
 
   const handleColorChange = (id: string, color: string) => {
@@ -71,30 +68,46 @@ export function AdminSidebar({
   const toggleActionsMenu = (id: string) => {
     setActionsMenuId((current) => (current === id ? null : id));
     setColorMenuId(null);
-    setDeleteStepById({});
   };
 
   const handleDuplicate = (id: string) => {
     duplicateFolderAction({ id });
     setActionsMenuId(null);
-    setDeleteStepById({});
   };
 
   const requestDelete = (id: string) => {
-    setDeleteStepById({ [id]: "confirm" });
+    setDeleteTargetId(id);
+    setActionsMenuId(null);
+    setColorMenuId(null);
   };
 
   const cancelDelete = () => {
-    setDeleteStepById({});
+    setDeleteTargetId(null);
   };
 
-  const confirmDelete = (id: string) => {
-    deleteFolderAction({ id });
-    setDeleteStepById({});
+  const confirmDelete = () => {
+    if (!deleteTargetId) return;
+    deleteFolderAction({ id: deleteTargetId });
+    setDeleteTargetId(null);
   };
+
+  const deleteTargetFolder =
+    deleteTargetId !== null
+      ? (folders.find((f) => f.id === deleteTargetId) ?? null)
+      : null;
+  const deleteTargetCount =
+    deleteTargetId !== null ? getCountForFolder(deleteTargetId) : 0;
 
   return (
     <div className="col-span-2 border-r border-zinc-800/60">
+      <AdminDeleteFolderModal
+        open={deleteTargetFolder !== null}
+        folderLabel={deleteTargetFolder?.label ?? ""}
+        ideaCount={deleteTargetCount}
+        onCancel={cancelDelete}
+        onConfirm={confirmDelete}
+      />
+
       <div className="folders-scroll h-[calc(100vh-120px)] overflow-y-auto pt-8 pb-14">
         <SortableContext
           items={folders.map((folder) => `folder-sort-${folder.id}`)}
@@ -108,7 +121,6 @@ export function AdminSidebar({
               const isEditing = editingId === folder.id;
               const showColorMenu = colorMenuId === folder.id;
               const showActionsMenu = actionsMenuId === folder.id;
-              const deleteStep = deleteStepById[id] ?? "idle";
 
               return (
                 <SidebarFolderItem
@@ -120,7 +132,7 @@ export function AdminSidebar({
                   isActive={isActive}
                   isEditing={isEditing}
                   draftLabel={draftLabel}
-                  deleteStep={deleteStep}
+                  deleteStep="idle"
                   onSelectFolder={() => changeStatusAction(folder.id)}
                   onStartEditing={() => startEditing(folder)}
                   onCommitEditing={commitEditing}
@@ -132,7 +144,7 @@ export function AdminSidebar({
                   onToggleActionsMenu={() => toggleActionsMenu(id)}
                   onDuplicate={() => handleDuplicate(id)}
                   onRequestDelete={() => requestDelete(id)}
-                  onConfirmDelete={() => confirmDelete(id)}
+                  onConfirmDelete={confirmDelete}
                   onCancelDelete={cancelDelete}
                 />
               );

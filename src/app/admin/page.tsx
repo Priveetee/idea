@@ -169,11 +169,7 @@ export default function AdminPage() {
       return nextFolders;
     });
 
-    setIdeas((prevIdeas) =>
-      prevIdeas.map((idea) =>
-        idea.status === id ? { ...idea, status: "ARCHIVE" } : idea,
-      ),
-    );
+    setIdeas((prevIdeas) => prevIdeas.filter((idea) => idea.status !== id));
 
     if (selected && selected.status === id) {
       setSelected(null);
