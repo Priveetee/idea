@@ -178,8 +178,8 @@ export function AdminSidebar({
 
   return (
     <div className="col-span-2 border-r border-zinc-800/60">
-      <div className="folders-scroll h-[calc(100vh-80px)] overflow-y-auto pt-10 pb-8">
-        <div className="flex flex-col items-center gap-9">
+      <div className="folders-scroll h-[calc(100vh-120px)] overflow-y-auto pt-8 pb-14">
+        <div className="flex flex-col items-center gap-12">
           {folders.map((folder) => {
             const count = getCountForFolder(folder.id as string);
             const isActive = activeStatus === folder.id;
