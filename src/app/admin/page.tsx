@@ -1,7 +1,13 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { FOLDERS, MOCK_IDEAS, type IdeaStatus } from "@/lib/mock-data";
+import {
+  BASE_FOLDERS,
+  INITIAL_IDEAS,
+  type IdeaStatus,
+  type IdeaItem,
+  type FolderConfig,
+} from "@/lib/mock-data";
 import { AdminHeader } from "./_components/admin-header";
 import { AdminSidebar } from "./_components/admin-sidebar";
 import { AdminIdeaList } from "./_components/admin-idea-list";
@@ -11,27 +17,98 @@ type SelectedIdea = {
   status: IdeaStatus;
   index: number;
   label: string;
+  id: string;
 };
 
+function generateFolderId(existing: FolderConfig[]): string {
+  let i = 1;
+  while (true) {
+    const candidate = `CUSTOM_${i}`;
+    if (!existing.some((f) => f.id === candidate)) return candidate;
+    i += 1;
+  }
+}
+
+function generateIdeaId(existing: IdeaItem[]): string {
+  let i = existing.length + 1;
+  while (existing.some((idea) => idea.id === String(i))) {
+    i += 1;
+  }
+  return String(i);
+}
+
 export default function AdminPage() {
-  const [activeStatus, setActiveStatus] = useState<IdeaStatus>("INBOX");
+  const [folders, setFolders] = useState<FolderConfig[]>(BASE_FOLDERS);
+  const [ideas, setIdeas] = useState<IdeaItem[]>(INITIAL_IDEAS);
+  const [activeStatus, setActiveStatus] = useState<IdeaStatus | string>(
+    "INBOX",
+  );
   const [selected, setSelected] = useState<SelectedIdea | null>(null);
   const [processing, setProcessing] = useState(false);
   const [managerNote, setManagerNote] = useState("");
 
-  const totalIdeas = useMemo(
-    () => Object.values(MOCK_IDEAS).reduce((acc, list) => acc + list.length, 0),
-    [],
+  const filteredIdeas = useMemo(
+    () => ideas.filter((idea) => idea.status === activeStatus),
+    [ideas, activeStatus],
   );
 
-  const inboxCount =
-    FOLDERS.find((f) => f.id === "INBOX")?.count ?? MOCK_IDEAS.INBOX.length;
+  const totalIdeas = ideas.length;
+  const inboxCount = ideas.filter((i) => i.status === "INBOX").length;
+  const devCount = ideas.filter((i) => i.status === "DEV").length;
+  const archiveCount = ideas.filter((i) => i.status === "ARCHIVE").length;
 
-  const devCount =
-    FOLDERS.find((f) => f.id === "DEV")?.count ?? MOCK_IDEAS.DEV.length;
+  const handleChangeStatus = (status: IdeaStatus | string) => {
+    setActiveStatus(status);
+    setSelected(null);
+    setProcessing(false);
+    setManagerNote("");
+  };
 
-  const archiveCount =
-    FOLDERS.find((f) => f.id === "ARCHIVE")?.count ?? MOCK_IDEAS.ARCHIVE.length;
+  const handleSelectIdea = (payload: { item: string; index: number }) => {
+    const item = filteredIdeas[payload.index];
+    if (!item) return;
+    setSelected({
+      status: activeStatus as IdeaStatus,
+      index: payload.index,
+      label: item.label,
+      id: item.id,
+    });
+    setProcessing(false);
+    setManagerNote("");
+  };
+
+  const handleAddIdea = (payload: {
+    label: string;
+    status: IdeaStatus | string;
+  }) => {
+    const newId = generateIdeaId(ideas);
+    const idea: IdeaItem = {
+      id: newId,
+      status: payload.status,
+      label: payload.label,
+    };
+    setIdeas((prev) => [...prev, idea]);
+  };
+
+  const handleAddFolder = () => {
+    const newId = generateFolderId(folders);
+    const folder: FolderConfig = {
+      id: newId,
+      label: `Espace ${folders.length + 1}`,
+      color: "#22c55e",
+    };
+    setFolders((prev) => [...prev, folder]);
+    setActiveStatus(newId);
+    setSelected(null);
+    setProcessing(false);
+    setManagerNote("");
+  };
+
+  const handleClearSelection = () => {
+    setSelected(null);
+    setProcessing(false);
+    setManagerNote("");
+  };
 
   return (
     <div className="min-h-screen bg-[#050509] px-8 py-10 text-white">
@@ -44,31 +121,28 @@ export default function AdminPage() {
 
       <div className="grid h-[640px] grid-cols-12 gap-8">
         <AdminSidebar
+          folders={folders}
+          ideas={ideas}
           activeStatus={activeStatus}
-          changeStatusAction={(status) => {
-            setActiveStatus(status);
-            setSelected(null);
-            setProcessing(false);
-            setManagerNote("");
-          }}
+          changeStatusAction={handleChangeStatus}
         />
         <AdminIdeaList
           activeStatus={activeStatus}
-          selectAction={({ item, index }) => {
-            setSelected({ status: activeStatus, index, label: item });
-            setProcessing(false);
-            setManagerNote("");
-          }}
+          folders={folders}
+          items={filteredIdeas}
+          selectAction={handleSelectIdea}
+          addIdeaAction={handleAddIdea}
+          addFolderAction={handleAddFolder}
         />
         <div className="col-span-5">
           <AdminIdeaPanel
             selected={selected}
-            activeStatus={activeStatus}
+            activeStatus={activeStatus as IdeaStatus}
             processing={processing}
             managerNote={managerNote}
             processingAction={setProcessing}
             managerNoteAction={setManagerNote}
-            clearSelectionAction={() => setSelected(null)}
+            clearSelectionAction={handleClearSelection}
           />
         </div>
       </div>
