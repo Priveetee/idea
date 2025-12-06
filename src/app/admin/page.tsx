@@ -122,6 +122,64 @@ export default function AdminPage() {
     setFolders((prev) => prev.map((f) => (f.id === id ? { ...f, color } : f)));
   };
 
+  const handleDuplicateFolder = (id: string) => {
+    setFolders((prevFolders) => {
+      const source = prevFolders.find((f) => f.id === id);
+      if (!source) return prevFolders;
+
+      const newFolderId = generateFolderId(prevFolders);
+      const duplicateFolder: FolderConfig = {
+        id: newFolderId,
+        label: `${source.label} (copie)`,
+        color: source.color,
+      };
+
+      setIdeas((prevIdeas) => {
+        const ideasInFolder = prevIdeas.filter((idea) => idea.status === id);
+        if (ideasInFolder.length === 0) return prevIdeas;
+
+        const nextIdeas = [...prevIdeas];
+        ideasInFolder.forEach((idea) => {
+          const newId = generateIdeaId(nextIdeas);
+          nextIdeas.push({
+            ...idea,
+            id: newId,
+            status: newFolderId,
+          });
+        });
+        return nextIdeas;
+      });
+
+      return [...prevFolders, duplicateFolder];
+    });
+  };
+
+  const handleDeleteFolder = (id: string) => {
+    if (id === "INBOX" || id === "DEV" || id === "ARCHIVE") return;
+
+    setFolders((prevFolders) => {
+      const nextFolders = prevFolders.filter((f) => f.id !== id);
+      if (nextFolders.length === 0) {
+        setActiveStatus("INBOX");
+      } else if (activeStatus === id) {
+        const fallback =
+          nextFolders.find((f) => f.id === "INBOX") ?? nextFolders[0];
+        setActiveStatus(fallback.id);
+      }
+      return nextFolders;
+    });
+
+    setIdeas((prevIdeas) =>
+      prevIdeas.map((idea) =>
+        idea.status === id ? { ...idea, status: "ARCHIVE" } : idea,
+      ),
+    );
+
+    if (selected && selected.status === id) {
+      setSelected(null);
+    }
+  };
+
   const handleReorderFolders = (orderedIds: string[]) => {
     setFolders((prev) => {
       const byId = new Map(prev.map((f) => [f.id, f]));
@@ -286,6 +344,8 @@ export default function AdminPage() {
               changeFolderColorAction={({ id, color }) =>
                 handleChangeFolderColor(id, color)
               }
+              duplicateFolderAction={({ id }) => handleDuplicateFolder(id)}
+              deleteFolderAction={({ id }) => handleDeleteFolder(id)}
             />
             <AdminIdeaList
               activeStatus={activeStatus}
