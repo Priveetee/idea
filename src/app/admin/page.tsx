@@ -102,6 +102,18 @@ export default function AdminPage() {
     setIdeas((prev) => [...prev, idea]);
   };
 
+  const handleRenameIdea = (id: string, label: string) => {
+    setIdeas((prev) =>
+      prev.map((idea) => (idea.id === id ? { ...idea, label } : idea)),
+    );
+    setSelected((prev) => (prev && prev.id === id ? { ...prev, label } : prev));
+  };
+
+  const handleDeleteIdea = (id: string) => {
+    setIdeas((prev) => prev.filter((idea) => idea.id !== id));
+    setSelected((prev) => (prev && prev.id === id ? null : prev));
+  };
+
   const handleAddFolder = () => {
     const newId = generateFolderId(folders);
     const folder: FolderConfig = {
@@ -350,6 +362,8 @@ export default function AdminPage() {
               selectAction={handleSelectIdea}
               addIdeaAction={handleAddIdea}
               addFolderAction={handleAddFolder}
+              renameIdeaAction={({ id, label }) => handleRenameIdea(id, label)}
+              deleteIdeaAction={({ id }) => handleDeleteIdea(id)}
             />
             <div className="col-span-5 h-full overflow-y-auto">
               <AdminIdeaPanel

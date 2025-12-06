@@ -26,6 +26,7 @@ interface BaseAnimatedItemProps {
   index: number;
   onMouseEnter?: MouseEventHandler<HTMLDivElement>;
   onClick?: MouseEventHandler<HTMLDivElement>;
+  onDoubleClick?: MouseEventHandler<HTMLDivElement>;
 }
 
 const BaseAnimatedItem: React.FC<BaseAnimatedItemProps> = ({
@@ -34,6 +35,7 @@ const BaseAnimatedItem: React.FC<BaseAnimatedItemProps> = ({
   index,
   onMouseEnter,
   onClick,
+  onDoubleClick,
 }) => {
   const ref = useRef<HTMLDivElement>(null);
   const inView = useInView(ref, { amount: 0.5, once: false });
@@ -43,6 +45,7 @@ const BaseAnimatedItem: React.FC<BaseAnimatedItemProps> = ({
       data-index={index}
       onMouseEnter={onMouseEnter}
       onClick={onClick}
+      onDoubleClick={onDoubleClick}
       initial={{ scale: 0.7, opacity: 0 }}
       animate={inView ? { scale: 1, opacity: 1 } : { scale: 0.7, opacity: 0 }}
       transition={{ duration: 0.2, delay }}
@@ -101,6 +104,7 @@ function DragHandle({ id, enabled }: DragHandleProps) {
 interface AnimatedListProps {
   items?: string[] | AnimatedListItem[];
   onItemSelect?: (item: AnimatedListItem, index: number) => void;
+  onItemDoubleClick?: (item: AnimatedListItem, index: number) => void;
   enableDrag?: boolean;
   showGradients?: boolean;
   enableArrowNavigation?: boolean;
@@ -113,6 +117,7 @@ interface AnimatedListProps {
 const AnimatedList: React.FC<AnimatedListProps> = ({
   items = ["Item 1", "Item 2", "Item 3"],
   onItemSelect,
+  onItemDoubleClick,
   enableDrag = false,
   showGradients = true,
   enableArrowNavigation = true,
@@ -148,6 +153,13 @@ const AnimatedList: React.FC<AnimatedListProps> = ({
       if (onItemSelect) onItemSelect(item, index);
     },
     [onItemSelect],
+  );
+
+  const handleItemDouble = useCallback(
+    (item: AnimatedListItem, index: number) => {
+      if (onItemDoubleClick) onItemDoubleClick(item, index);
+    },
+    [onItemDoubleClick],
   );
 
   const handleScroll = (e: UIEvent<HTMLDivElement>) => {
@@ -235,9 +247,10 @@ const AnimatedList: React.FC<AnimatedListProps> = ({
                 delay={0.1}
                 onMouseEnter={() => handleItemMouseEnter(index)}
                 onClick={() => handleItemClick(item, index)}
+                onDoubleClick={() => handleItemDouble(item, index)}
               >
                 <div
-                  className={`p-4 bg-[#111] rounded-lg ${
+                  className={`rounded-lg bg-[#111] p-4 ${
                     selectedIndex === index ? "bg-[#222]" : ""
                   } ${itemClassName}`}
                 >
