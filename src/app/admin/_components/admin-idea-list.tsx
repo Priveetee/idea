@@ -2,6 +2,10 @@
 
 import { useMemo, useState, useEffect, useRef } from "react";
 import { FaFilter } from "react-icons/fa";
+import {
+  SortableContext,
+  verticalListSortingStrategy,
+} from "@dnd-kit/sortable";
 import AnimatedList, {
   type AnimatedListItem,
 } from "@/components/ui/animated-list";
@@ -21,7 +25,6 @@ type AdminIdeaListProps = {
   selectAction: (_: { item: string; index: number }) => void;
   addIdeaAction: (_: { label: string; status: IdeaStatus | string }) => void;
   addFolderAction: () => void;
-  reorderIdeasAction: (_: { orderedIds: string[] }) => void;
 };
 
 export function AdminIdeaList({
@@ -31,7 +34,6 @@ export function AdminIdeaList({
   selectAction,
   addIdeaAction,
   addFolderAction,
-  reorderIdeasAction,
 }: AdminIdeaListProps) {
   const [filterOpen, setFilterOpen] = useState(false);
   const [query, setQuery] = useState("");
@@ -63,17 +65,13 @@ export function AdminIdeaList({
     const l = i.label;
     const idx = l.indexOf(" (Impact:");
     return {
-      id: i.id,
+      id: `idea-${i.id}`,
       label: idx === -1 ? l : l.slice(0, idx),
     };
   });
 
   const handleItemSelect = (item: AnimatedListItem, index: number) => {
     selectAction({ item: item.label, index });
-  };
-
-  const handleReorder = (orderedIds: string[]) => {
-    reorderIdeasAction({ orderedIds });
   };
 
   return (
@@ -146,16 +144,20 @@ export function AdminIdeaList({
             pour en ajouter une.
           </div>
         ) : (
-          <AnimatedList
-            items={displayItems}
-            onItemSelect={handleItemSelect}
-            onReorder={handleReorder}
-            enableDrag
-            showGradients
-            enableArrowNavigation
-            displayScrollbar
-            className="w-full"
-          />
+          <SortableContext
+            items={displayItems.map((item) => item.id)}
+            strategy={verticalListSortingStrategy}
+          >
+            <AnimatedList
+              items={displayItems}
+              onItemSelect={handleItemSelect}
+              enableDrag
+              showGradients
+              enableArrowNavigation={false}
+              displayScrollbar
+              className="w-full"
+            />
+          </SortableContext>
         )}
       </div>
     </div>

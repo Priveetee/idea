@@ -8,10 +8,6 @@ import {
   useSensor,
   useSensors,
 } from "@dnd-kit/core";
-import { AdminHeader } from "./_components/admin-header";
-import { AdminSidebar } from "./_components/admin-sidebar";
-import { AdminIdeaList } from "./_components/admin-idea-list";
-import { AdminIdeaPanel } from "./_components/admin-idea-panel";
 import {
   BASE_FOLDERS,
   INITIAL_IDEAS,
@@ -19,6 +15,10 @@ import {
   type IdeaItem,
   type FolderConfig,
 } from "@/lib/mock-data";
+import { AdminHeader } from "./_components/admin-header";
+import { AdminSidebar } from "./_components/admin-sidebar";
+import { AdminIdeaList } from "./_components/admin-idea-list";
+import { AdminIdeaPanel } from "./_components/admin-idea-panel";
 
 type SelectedIdea = {
   status: IdeaStatus | string;
@@ -189,28 +189,35 @@ export default function AdminPage() {
     const activeId = String(active.id);
     const overId = String(over.id);
 
-    if (overId.startsWith("idea-") && activeId.startsWith("idea-")) {
-      const ideaActiveId = activeId.replace("idea-", "");
-      const ideaOverId = overId.replace("idea-", "");
-      if (ideaActiveId === ideaOverId) return;
+    const isIdeaDrag = activeId.startsWith("idea-");
+    if (!isIdeaDrag) return;
 
-      const idsInStatus = filteredIdeas.map((i) => i.id);
-      const oldIndex = idsInStatus.indexOf(ideaActiveId);
-      const newIndex = idsInStatus.indexOf(ideaOverId);
-      if (oldIndex === -1 || newIndex === -1) return;
+    const ideaId = activeId.replace("idea-", "");
 
-      const reordered = [...idsInStatus];
-      const [removed] = reordered.splice(oldIndex, 1);
-      reordered.splice(newIndex, 0, removed);
-
-      handleReorderIdeas(reordered);
+    if (overId.startsWith("folder-")) {
+      const folderId = overId.replace("folder-", "");
+      if (!folderId || folderId === "") return;
+      handleMoveIdeaToFolder(ideaId, folderId);
       return;
     }
 
-    if (overId.startsWith("folder-") && activeId.startsWith("idea-")) {
-      const ideaId = activeId.replace("idea-", "");
-      const folderId = overId.replace("folder-", "");
-      handleMoveIdeaToFolder(ideaId, folderId);
+    if (overId.startsWith("idea-")) {
+      const ideaOverId = overId.replace("idea-", "");
+      if (ideaId === ideaOverId) return;
+
+      const idsInStatus = filteredIdeas.map((i) => i.id);
+      if (!idsInStatus.includes(ideaId) || !idsInStatus.includes(ideaOverId)) {
+        return;
+      }
+
+      const oldIndex = idsInStatus.indexOf(ideaId);
+      const newIndex = idsInStatus.indexOf(ideaOverId);
+      if (oldIndex === -1 || newIndex === -1) return;
+
+      const newOrder = [...idsInStatus];
+      const [removed] = newOrder.splice(oldIndex, 1);
+      newOrder.splice(newIndex, 0, removed);
+      handleReorderIdeas(newOrder);
     }
   };
 
@@ -245,9 +252,6 @@ export default function AdminPage() {
               selectAction={handleSelectIdea}
               addIdeaAction={handleAddIdea}
               addFolderAction={handleAddFolder}
-              reorderIdeasAction={({ orderedIds }) =>
-                handleReorderIdeas(orderedIds)
-              }
             />
             <div className="col-span-5 h-full overflow-y-auto">
               <AdminIdeaPanel
