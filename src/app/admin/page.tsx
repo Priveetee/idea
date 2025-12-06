@@ -7,8 +7,6 @@ import {
   type IdeaStatus,
   type IdeaItem,
   type FolderConfig,
-  type IdeaLink,
-  type IdeaBullet,
 } from "@/lib/mock-data";
 import { AdminHeader } from "./_components/admin-header";
 import { AdminSidebar } from "./_components/admin-sidebar";
@@ -20,15 +18,6 @@ type SelectedIdea = {
   index: number;
   label: string;
   id: string;
-};
-
-type IdeaDetailsPayload = {
-  id: string;
-  managerSummary: string;
-  managerContent: string;
-  managerLinks: IdeaLink[];
-  managerBullets: IdeaBullet[];
-  managerNote: string;
 };
 
 function generateFolderId(existing: FolderConfig[]): string {
@@ -116,7 +105,18 @@ export default function AdminPage() {
     setFolders((prev) => prev.map((f) => (f.id === id ? { ...f, label } : f)));
   };
 
-  const handleUpdateIdeaDetails = (payload: IdeaDetailsPayload) => {
+  const handleChangeFolderColor = (id: string, color: string) => {
+    setFolders((prev) => prev.map((f) => (f.id === id ? { ...f, color } : f)));
+  };
+
+  const handleUpdateIdeaDetails = (payload: {
+    id: string;
+    managerSummary: string;
+    managerContent: string;
+    managerLinks: IdeaItem["managerLinks"];
+    managerBullets: IdeaItem["managerBullets"];
+    managerNote: string;
+  }) => {
     setIdeas((prev) =>
       prev.map((idea) =>
         idea.id === payload.id
@@ -158,6 +158,9 @@ export default function AdminPage() {
           activeStatus={activeStatus}
           changeStatusAction={handleChangeStatus}
           renameFolderAction={({ id, label }) => handleRenameFolder(id, label)}
+          changeFolderColorAction={({ id, color }) =>
+            handleChangeFolderColor(id, color)
+          }
         />
         <AdminIdeaList
           activeStatus={activeStatus}
