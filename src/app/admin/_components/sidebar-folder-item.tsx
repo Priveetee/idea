@@ -57,10 +57,14 @@ export function SidebarFolderItem({
 }: SidebarFolderItemProps) {
   const id = folderId ?? "";
   const sortableId = `folder-sort-${id}`;
+
   const {
     setNodeRef: setSortableRef,
+    attributes,
+    listeners,
     transform,
     transition,
+    isDragging,
   } = useSortable({
     id: sortableId,
   });
@@ -87,8 +91,12 @@ export function SidebarFolderItem({
     >
       <button
         type="button"
+        {...attributes}
+        {...listeners}
         onClick={onSelectFolder}
-        className="relative transition hover:scale-[1.02]"
+        className={`relative transition hover:scale-[1.02] ${
+          isDragging ? "cursor-grabbing opacity-80" : "cursor-grab"
+        }`}
       >
         <Folder size={1.1} color={color} active={isActive} />
         {(isActive || isOver) && (
