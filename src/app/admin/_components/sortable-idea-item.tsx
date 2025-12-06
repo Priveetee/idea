@@ -17,7 +17,6 @@ export function SortableIdeaItem({
   onSelect,
 }: SortableIdeaItemProps) {
   const sortableId = `idea-${id}`;
-
   const { attributes, listeners, setNodeRef, transform, transition } =
     useSortable({ id: sortableId });
 

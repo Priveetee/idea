@@ -10,8 +10,27 @@ import React, {
   UIEvent,
 } from "react";
 import { motion, useInView } from "motion/react";
+import {
+  DndContext,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  DragEndEvent,
+} from "@dnd-kit/core";
+import {
+  SortableContext,
+  useSortable,
+  verticalListSortingStrategy,
+  arrayMove,
+} from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
 
-interface AnimatedItemProps {
+export type AnimatedListItem = {
+  id: string;
+  label: string;
+};
+
+interface BaseAnimatedItemProps {
   children: ReactNode;
   delay?: number;
   index: number;
@@ -19,7 +38,7 @@ interface AnimatedItemProps {
   onClick?: MouseEventHandler<HTMLDivElement>;
 }
 
-const AnimatedItem: React.FC<AnimatedItemProps> = ({
+const BaseAnimatedItem: React.FC<BaseAnimatedItemProps> = ({
   children,
   delay = 0,
   index,
@@ -44,9 +63,38 @@ const AnimatedItem: React.FC<AnimatedItemProps> = ({
   );
 };
 
+type SortableWrapperProps = {
+  id: string;
+  children: ReactNode;
+};
+
+function SortableWrapper({ id, children }: SortableWrapperProps) {
+  const { attributes, listeners, setNodeRef, transform, transition } =
+    useSortable({ id });
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+  };
+
+  return (
+    <div
+      ref={setNodeRef}
+      style={style}
+      {...attributes}
+      {...listeners}
+      className="cursor-grab active:cursor-grabbing"
+    >
+      {children}
+    </div>
+  );
+}
+
 interface AnimatedListProps {
-  items?: string[];
-  onItemSelect?: (item: string, index: number) => void;
+  items?: string[] | AnimatedListItem[];
+  onItemSelect?: (item: AnimatedListItem, index: number) => void;
+  onReorder?: (orderedIds: string[]) => void;
+  enableDrag?: boolean;
   showGradients?: boolean;
   enableArrowNavigation?: boolean;
   className?: string;
@@ -56,24 +104,10 @@ interface AnimatedListProps {
 }
 
 const AnimatedList: React.FC<AnimatedListProps> = ({
-  items = [
-    "Item 1",
-    "Item 2",
-    "Item 3",
-    "Item 4",
-    "Item 5",
-    "Item 6",
-    "Item 7",
-    "Item 8",
-    "Item 9",
-    "Item 10",
-    "Item 11",
-    "Item 12",
-    "Item 13",
-    "Item 14",
-    "Item 15",
-  ],
+  items = ["Item 1", "Item 2", "Item 3"],
   onItemSelect,
+  onReorder,
+  enableDrag = false,
   showGradients = true,
   enableArrowNavigation = true,
   className = "",
@@ -87,16 +121,29 @@ const AnimatedList: React.FC<AnimatedListProps> = ({
   const [topGradientOpacity, setTopGradientOpacity] = useState<number>(0);
   const [bottomGradientOpacity, setBottomGradientOpacity] = useState<number>(1);
 
+  const baseItems: AnimatedListItem[] = Array.isArray(items)
+    ? typeof items[0] === "string"
+      ? (items as string[]).map((label, index) => ({
+          id: String(index),
+          label,
+        }))
+      : (items as AnimatedListItem[])
+    : [];
+
+  const [order, setOrder] = useState<string[]>(baseItems.map((i) => i.id));
+
+  const orderedItems = order
+    .map((id) => baseItems.find((i) => i.id === id))
+    .filter((i): i is AnimatedListItem => i !== undefined);
+
   const handleItemMouseEnter = useCallback((index: number) => {
     setSelectedIndex(index);
   }, []);
 
   const handleItemClick = useCallback(
-    (item: string, index: number) => {
+    (item: AnimatedListItem, index: number) => {
       setSelectedIndex(index);
-      if (onItemSelect) {
-        onItemSelect(item, index);
-      }
+      if (onItemSelect) onItemSelect(item, index);
     },
     [onItemSelect],
   );
@@ -116,15 +163,15 @@ const AnimatedList: React.FC<AnimatedListProps> = ({
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === "ArrowDown" || (e.key === "Tab" && !e.shiftKey)) {
         e.preventDefault();
-        setSelectedIndex((prev) => Math.min(prev + 1, items.length - 1));
+        setSelectedIndex((prev) => Math.min(prev + 1, orderedItems.length - 1));
       } else if (e.key === "ArrowUp" || (e.key === "Tab" && e.shiftKey)) {
         e.preventDefault();
         setSelectedIndex((prev) => Math.max(prev - 1, 0));
       } else if (e.key === "Enter") {
-        if (selectedIndex >= 0 && selectedIndex < items.length) {
+        if (selectedIndex >= 0 && selectedIndex < orderedItems.length) {
           e.preventDefault();
           if (onItemSelect) {
-            onItemSelect(items[selectedIndex], selectedIndex);
+            onItemSelect(orderedItems[selectedIndex], selectedIndex);
           }
         }
       }
@@ -132,7 +179,7 @@ const AnimatedList: React.FC<AnimatedListProps> = ({
 
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [items, selectedIndex, onItemSelect, enableArrowNavigation]);
+  }, [orderedItems, selectedIndex, onItemSelect, enableArrowNavigation]);
 
   useEffect(() => {
     if (selectedIndex < 0 || !listRef.current) return;
@@ -156,31 +203,50 @@ const AnimatedList: React.FC<AnimatedListProps> = ({
     ) {
       container.scrollTo({
         top: itemBottom - containerHeight + extraMargin,
-        behavior: "smooth",
       });
     }
   }, [selectedIndex]);
 
-  return (
-    <div className={`relative w-[500px] ${className}`}>
-      <div
-        ref={listRef}
-        className={`max-h-[400px] overflow-y-auto p-4 ${
-          displayScrollbar
-            ? "[&::-webkit-scrollbar]:w-[8px] [&::-webkit-scrollbar-track]:bg-[#060010] [&::-webkit-scrollbar-thumb]:bg-[#222] [&::-webkit-scrollbar-thumb]:rounded-[4px]"
-            : "scrollbar-hide"
-        }`}
-        onScroll={handleScroll}
-        style={{
-          scrollbarWidth: displayScrollbar ? "thin" : "none",
-          scrollbarColor: "#222 #060010",
-        }}
-      >
-        {items.map((item, index) => (
-          <AnimatedItem
-            key={index}
-            delay={0.1}
+  const sensors = useSensors(
+    useSensor(PointerSensor, {
+      activationConstraint: { distance: 4 },
+    }),
+  );
+
+  const handleReorder = (event: DragEndEvent) => {
+    const { active, over } = event;
+    if (!over) return;
+    if (active.id === over.id) return;
+
+    const activeIndex = order.indexOf(String(active.id));
+    const overIndex = order.indexOf(String(over.id));
+    if (activeIndex === -1 || overIndex === -1) return;
+
+    const newOrder = arrayMove(order, activeIndex, overIndex);
+    setOrder(newOrder);
+    if (onReorder) onReorder(newOrder);
+  };
+
+  const content = (
+    <div
+      ref={listRef}
+      className={`max-h-[400px] overflow-y-auto p-4 ${
+        displayScrollbar
+          ? "[&::-webkit-scrollbar]:w-[8px] [&::-webkit-scrollbar-track]:bg-[#060010] [&::-webkit-scrollbar-thumb]:bg-[#222] [&::-webkit-scrollbar-thumb]:rounded-[4px]"
+          : "scrollbar-hide"
+      }`}
+      onScroll={handleScroll}
+      style={{
+        scrollbarWidth: displayScrollbar ? "thin" : "none",
+        scrollbarColor: "#222 #060010",
+      }}
+    >
+      {orderedItems.map((item, index) => {
+        const inner = (
+          <BaseAnimatedItem
+            key={item.id}
             index={index}
+            delay={0.1}
             onMouseEnter={() => handleItemMouseEnter(index)}
             onClick={() => handleItemClick(item, index)}
           >
@@ -189,11 +255,33 @@ const AnimatedList: React.FC<AnimatedListProps> = ({
                 selectedIndex === index ? "bg-[#222]" : ""
               } ${itemClassName}`}
             >
-              <p className="m-0 text-white">{item}</p>
+              <p className="m-0 text-white">{item.label}</p>
             </div>
-          </AnimatedItem>
-        ))}
-      </div>
+          </BaseAnimatedItem>
+        );
+
+        if (!enableDrag) return inner;
+
+        return (
+          <SortableWrapper key={item.id} id={item.id}>
+            {inner}
+          </SortableWrapper>
+        );
+      })}
+    </div>
+  );
+
+  return (
+    <div className={`relative ${className}`}>
+      {enableDrag ? (
+        <DndContext sensors={sensors} onDragEnd={handleReorder}>
+          <SortableContext items={order} strategy={verticalListSortingStrategy}>
+            {content}
+          </SortableContext>
+        </DndContext>
+      ) : (
+        content
+      )}
       {showGradients && (
         <>
           <div
