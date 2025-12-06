@@ -1,7 +1,5 @@
 "use client";
 
-import ClickSpark from "@/components/ui/click-spark";
-
 type AdminHeaderProps = {
   totalIdeas: number;
   inboxCount: number;
@@ -41,14 +39,12 @@ export function AdminHeader({
             <span className="font-semibold text-zinc-400">{archiveCount}</span>
           </div>
         </div>
-        <ClickSpark sparkColor="#22c55e" sparkCount={12}>
-          <button
-            type="button"
-            className="rounded-full border border-zinc-700 bg-zinc-900 px-4 py-2 text-sm text-zinc-200 transition hover:bg-zinc-800"
-          >
-            Rafraîchir le flux
-          </button>
-        </ClickSpark>
+        <button
+          type="button"
+          className="rounded-full border border-zinc-700 bg-zinc-900 px-4 py-2 text-sm text-zinc-200 transition hover:bg-zinc-800"
+        >
+          Rafraîchir le flux
+        </button>
       </div>
     </header>
   );

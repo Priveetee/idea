@@ -87,7 +87,10 @@ export default function AdminPage() {
       status: payload.status,
       label: payload.label,
     };
-    setIdeas((prev) => [...prev, idea]);
+    setIdeas((prev) => {
+      const next = [...prev, idea];
+      return next;
+    });
   };
 
   const handleAddFolder = () => {
@@ -102,6 +105,10 @@ export default function AdminPage() {
     setSelected(null);
     setProcessing(false);
     setManagerNote("");
+  };
+
+  const handleRenameFolder = (id: string, label: string) => {
+    setFolders((prev) => prev.map((f) => (f.id === id ? { ...f, label } : f)));
   };
 
   const handleClearSelection = () => {
@@ -125,6 +132,7 @@ export default function AdminPage() {
           ideas={ideas}
           activeStatus={activeStatus}
           changeStatusAction={handleChangeStatus}
+          renameFolderAction={({ id, label }) => handleRenameFolder(id, label)}
         />
         <AdminIdeaList
           activeStatus={activeStatus}

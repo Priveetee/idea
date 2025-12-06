@@ -9,6 +9,7 @@ type SelectedIdea = {
   status: IdeaStatus;
   index: number;
   label: string;
+  id: string;
 };
 
 type AdminIdeaPanelProps = {

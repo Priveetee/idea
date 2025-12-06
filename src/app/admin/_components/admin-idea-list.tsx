@@ -1,7 +1,6 @@
 "use client";
 
-import { useState } from "react";
-import { FaFilter } from "react-icons/fa";
+import { useMemo, useState } from "react";
 import AnimatedList from "@/components/ui/animated-list";
 import {
   getFolderColor,
@@ -10,8 +9,8 @@ import {
   type IdeaItem,
   type FolderConfig,
 } from "@/lib/mock-data";
-
-type SortMode = "created" | "alpha";
+import { IdeaListHeader } from "./idea-list-header";
+import { IdeaCreationModal } from "./idea-creation-modal";
 
 type AdminIdeaListProps = {
   activeStatus: IdeaStatus | string;
@@ -30,98 +29,52 @@ export function AdminIdeaList({
   addIdeaAction,
   addFolderAction,
 }: AdminIdeaListProps) {
-  const [sortMode, setSortMode] = useState<SortMode>("created");
-  const [filterOpen, setFilterOpen] = useState(false);
-  const [draftLabel, setDraftLabel] = useState("");
+  const [sortMode, setSortMode] = useState<"recent" | "old">("recent");
+  const [query, setQuery] = useState("");
+  const [creationOpen, setCreationOpen] = useState(false);
 
   const color = getFolderColor(activeStatus, folders);
   const label = getFolderLabel(activeStatus, folders);
 
-  const sortedItems =
-    sortMode === "alpha"
-      ? [...items].sort((a, b) =>
-          a.label.localeCompare(b.label, "fr", { sensitivity: "base" }),
-        )
-      : items;
+  const sorted = useMemo(() => {
+    const base =
+      sortMode === "recent"
+        ? [...items].sort((a, b) => Number(b.id) - Number(a.id))
+        : [...items].sort((a, b) => Number(a.id) - Number(b.id));
 
-  const handleCreateIdea = () => {
-    const trimmed = draftLabel.trim();
-    if (!trimmed) return;
-    addIdeaAction({ label: trimmed, status: activeStatus });
-    setDraftLabel("");
-  };
+    if (!query.trim()) return base;
+    const q = query.toLowerCase();
+    return base.filter((i) => i.label.toLowerCase().includes(q));
+  }, [items, sortMode, query]);
 
   return (
-    <div className="col-span-5 px-2">
-      <div className="mb-3 flex items-center justify-between gap-4">
-        <div className="flex items-center gap-2">
-          <span
-            className="inline-flex h-2 w-2 rounded-full"
-            style={{ backgroundColor: color }}
-          />
-          <span className="text-sm font-medium text-zinc-300">{label}</span>
-        </div>
-        <div className="flex items-center gap-2 text-[11px] text-zinc-500">
-          <button
-            type="button"
-            onClick={() => setFilterOpen((x) => !x)}
-            className={`flex h-7 items-center gap-2 rounded-full border px-3 transition ${
-              filterOpen
-                ? "border-[#5227FF] bg-[#5227FF]/10 text-zinc-100"
-                : "border-zinc-700 bg-zinc-900 text-zinc-400 hover:border-zinc-500"
-            }`}
-          >
-            <FaFilter className="h-3 w-3" />
-            <span>Filtres</span>
-          </button>
-          <select
-            value={sortMode}
-            onChange={(e) => setSortMode(e.target.value as SortMode)}
-            className="h-7 rounded-full border border-zinc-700 bg-zinc-900 px-3 text-[11px] text-zinc-400 outline-none"
-          >
-            <option value="created">Ordre d&apos;arrivée</option>
-            <option value="alpha">Alphabétique</option>
-          </select>
-          <button
-            type="button"
-            onClick={addFolderAction}
-            className="h-7 rounded-full border border-zinc-700 bg-zinc-900 px-3 text-[11px] text-zinc-300 transition hover:border-zinc-500"
-          >
-            + Folder
-          </button>
-        </div>
-      </div>
-
-      {filterOpen && (
-        <div className="mb-3 rounded-2xl border border-zinc-900 bg-[#060010] px-4 py-3 text-[11px] text-zinc-400">
-          Zone filtres mock (par TGI, par mots-clés, par période).
-        </div>
+    <div className="relative col-span-5 px-2">
+      {creationOpen && (
+        <IdeaCreationModal
+          activeStatus={activeStatus}
+          onClose={() => setCreationOpen(false)}
+          onCreate={addIdeaAction}
+        />
       )}
 
-      <div className="mb-3 rounded-2xl border border-zinc-900 bg-[#060010] px-4 py-3">
-        <div className="flex items-center gap-2">
-          <input
-            value={draftLabel}
-            onChange={(e) => setDraftLabel(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === "Enter") handleCreateIdea();
-            }}
-            placeholder="Nouvelle idée pour cet espace…"
-            className="h-8 flex-1 rounded-md border border-zinc-700 bg-zinc-950 px-3 text-[11px] text-zinc-100 outline-none focus:border-[#5227FF]"
-          />
-          <button
-            type="button"
-            onClick={handleCreateIdea}
-            className="h-8 rounded-full bg-[#5227FF] px-3 text-[11px] font-medium text-white transition hover:bg-[#3f21c9]"
-          >
-            + Idée
-          </button>
-        </div>
-      </div>
+      <IdeaListHeader
+        color={color}
+        label={label}
+        sortMode={sortMode}
+        onChangeSort={setSortMode}
+        query={query}
+        onChangeQuery={setQuery}
+        onAddFolder={addFolderAction}
+        onOpenCreation={() => setCreationOpen(true)}
+      />
 
-      <div className="rounded-2xl border border-zinc-900 bg-[#060010]">
+      <div
+        className={`rounded-2xl border border-zinc-900 bg-[#060010] transition ${
+          creationOpen ? "blur-sm pointer-events-none" : ""
+        }`}
+      >
         <AnimatedList
-          items={sortedItems.map((i) => i.label)}
+          items={sorted.map((i) => i.label)}
           onItemSelect={(item, index) => selectAction({ item, index })}
           showGradients
           enableArrowNavigation
