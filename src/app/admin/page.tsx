@@ -2,16 +2,23 @@
 
 import { useMemo, useState } from "react";
 import {
+  DndContext,
+  DragEndEvent,
+  PointerSensor,
+  useSensor,
+  useSensors,
+} from "@dnd-kit/core";
+import { AdminHeader } from "./_components/admin-header";
+import { AdminSidebar } from "./_components/admin-sidebar";
+import { AdminIdeaList } from "./_components/admin-idea-list";
+import { AdminIdeaPanel } from "./_components/admin-idea-panel";
+import {
   BASE_FOLDERS,
   INITIAL_IDEAS,
   type IdeaStatus,
   type IdeaItem,
   type FolderConfig,
 } from "@/lib/mock-data";
-import { AdminHeader } from "./_components/admin-header";
-import { AdminSidebar } from "./_components/admin-sidebar";
-import { AdminIdeaList } from "./_components/admin-idea-list";
-import { AdminIdeaPanel } from "./_components/admin-idea-panel";
 
 type SelectedIdea = {
   status: IdeaStatus | string;
@@ -44,6 +51,12 @@ export default function AdminPage() {
     "INBOX",
   );
   const [selected, setSelected] = useState<SelectedIdea | null>(null);
+
+  const sensors = useSensors(
+    useSensor(PointerSensor, {
+      activationConstraint: { distance: 4 },
+    }),
+  );
 
   const filteredIdeas = useMemo(
     () => ideas.filter((idea) => idea.status === activeStatus),
@@ -109,6 +122,33 @@ export default function AdminPage() {
     setFolders((prev) => prev.map((f) => (f.id === id ? { ...f, color } : f)));
   };
 
+  const handleReorderIdeas = (orderedIds: string[]) => {
+    setIdeas((prev) => {
+      const byId = new Map(prev.map((i) => [i.id, i]));
+      const currentStatus = activeStatus;
+      const inStatus = prev.filter((i) => i.status === currentStatus);
+      const others = prev.filter((i) => i.status !== currentStatus);
+
+      const orderedInStatus = orderedIds
+        .map((id) => byId.get(id))
+        .filter((idea): idea is IdeaItem => idea !== undefined)
+        .filter((idea) => idea.status === currentStatus);
+
+      if (orderedInStatus.length !== inStatus.length) return prev;
+
+      return [...others, ...orderedInStatus];
+    });
+  };
+
+  const handleMoveIdeaToFolder = (ideaId: string, targetFolderId: string) => {
+    setIdeas((prev) =>
+      prev.map((idea) =>
+        idea.id === ideaId ? { ...idea, status: targetFolderId } : idea,
+      ),
+    );
+    if (selected?.id === ideaId) setSelected(null);
+  };
+
   const handleUpdateIdeaDetails = (payload: {
     id: string;
     managerSummary: string;
@@ -142,6 +182,38 @@ export default function AdminPage() {
       ? ideas.find((i) => i.id === selected.id) || null
       : null;
 
+  const handleDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event;
+    if (!over) return;
+
+    const activeId = String(active.id);
+    const overId = String(over.id);
+
+    if (overId.startsWith("idea-") && activeId.startsWith("idea-")) {
+      const ideaActiveId = activeId.replace("idea-", "");
+      const ideaOverId = overId.replace("idea-", "");
+      if (ideaActiveId === ideaOverId) return;
+
+      const idsInStatus = filteredIdeas.map((i) => i.id);
+      const oldIndex = idsInStatus.indexOf(ideaActiveId);
+      const newIndex = idsInStatus.indexOf(ideaOverId);
+      if (oldIndex === -1 || newIndex === -1) return;
+
+      const reordered = [...idsInStatus];
+      const [removed] = reordered.splice(oldIndex, 1);
+      reordered.splice(newIndex, 0, removed);
+
+      handleReorderIdeas(reordered);
+      return;
+    }
+
+    if (overId.startsWith("folder-") && activeId.startsWith("idea-")) {
+      const ideaId = activeId.replace("idea-", "");
+      const folderId = overId.replace("folder-", "");
+      handleMoveIdeaToFolder(ideaId, folderId);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-[#050509] text-white">
       <div className="mx-auto flex min-h-screen w-full max-w-[1440px] flex-col px-8 py-10">
@@ -152,41 +224,46 @@ export default function AdminPage() {
           archiveCount={archiveCount}
         />
 
-        <div className="mt-6 grid h-[calc(100vh-160px)] grid-cols-12 gap-8 text-[13px] leading-relaxed">
-          <AdminSidebar
-            folders={folders}
-            ideas={ideas}
-            activeStatus={activeStatus}
-            changeStatusAction={handleChangeStatus}
-            renameFolderAction={({ id, label }) =>
-              handleRenameFolder(id, label)
-            }
-            changeFolderColorAction={({ id, color }) =>
-              handleChangeFolderColor(id, color)
-            }
-          />
-          <AdminIdeaList
-            activeStatus={activeStatus}
-            folders={folders}
-            items={filteredIdeas}
-            selectAction={handleSelectIdea}
-            addIdeaAction={handleAddIdea}
-            addFolderAction={handleAddFolder}
-          />
-          <div className="col-span-5 h-full overflow-y-auto">
-            <AdminIdeaPanel
-              selected={selected}
-              activeStatus={activeStatus as IdeaStatus}
-              managerSummary={selectedIdeaData?.managerSummary ?? ""}
-              managerContent={selectedIdeaData?.managerContent ?? ""}
-              managerLinks={selectedIdeaData?.managerLinks ?? []}
-              managerBullets={selectedIdeaData?.managerBullets ?? []}
-              managerNote={selectedIdeaData?.managerNote ?? ""}
-              updateIdeaDetailsAction={handleUpdateIdeaDetails}
-              clearSelectionAction={handleClearSelection}
+        <DndContext sensors={sensors} onDragEnd={handleDragEnd}>
+          <div className="mt-6 grid h-[calc(100vh-160px)] grid-cols-12 gap-8 text-[13px] leading-relaxed">
+            <AdminSidebar
+              folders={folders}
+              ideas={ideas}
+              activeStatus={activeStatus}
+              changeStatusAction={handleChangeStatus}
+              renameFolderAction={({ id, label }) =>
+                handleRenameFolder(id, label)
+              }
+              changeFolderColorAction={({ id, color }) =>
+                handleChangeFolderColor(id, color)
+              }
             />
+            <AdminIdeaList
+              activeStatus={activeStatus}
+              folders={folders}
+              items={filteredIdeas}
+              selectAction={handleSelectIdea}
+              addIdeaAction={handleAddIdea}
+              addFolderAction={handleAddFolder}
+              reorderIdeasAction={({ orderedIds }) =>
+                handleReorderIdeas(orderedIds)
+              }
+            />
+            <div className="col-span-5 h-full overflow-y-auto">
+              <AdminIdeaPanel
+                selected={selected}
+                activeStatus={activeStatus as IdeaStatus}
+                managerSummary={selectedIdeaData?.managerSummary ?? ""}
+                managerContent={selectedIdeaData?.managerContent ?? ""}
+                managerLinks={selectedIdeaData?.managerLinks ?? []}
+                managerBullets={selectedIdeaData?.managerBullets ?? []}
+                managerNote={selectedIdeaData?.managerNote ?? ""}
+                updateIdeaDetailsAction={handleUpdateIdeaDetails}
+                clearSelectionAction={handleClearSelection}
+              />
+            </div>
           </div>
-        </div>
+        </DndContext>
       </div>
     </div>
   );

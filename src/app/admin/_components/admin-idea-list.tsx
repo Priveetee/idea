@@ -2,6 +2,18 @@
 
 import { useMemo, useState, useEffect, useRef } from "react";
 import { FaFilter } from "react-icons/fa";
+import {
+  DndContext,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  DragEndEvent,
+} from "@dnd-kit/core";
+import {
+  arrayMove,
+  SortableContext,
+  verticalListSortingStrategy,
+} from "@dnd-kit/sortable";
 import AnimatedList from "@/components/ui/animated-list";
 import {
   getFolderColor,
@@ -19,6 +31,7 @@ type AdminIdeaListProps = {
   selectAction: (_: { item: string; index: number }) => void;
   addIdeaAction: (_: { label: string; status: IdeaStatus | string }) => void;
   addFolderAction: () => void;
+  reorderIdeasAction: (_: { orderedIds: string[] }) => void;
 };
 
 export function AdminIdeaList({
@@ -28,11 +41,21 @@ export function AdminIdeaList({
   selectAction,
   addIdeaAction,
   addFolderAction,
+  reorderIdeasAction,
 }: AdminIdeaListProps) {
   const [filterOpen, setFilterOpen] = useState(false);
   const [query, setQuery] = useState("");
   const [creationOpen, setCreationOpen] = useState(false);
+  const [localOrder, setLocalOrder] = useState<string[]>(() =>
+    items.map((i) => i.id),
+  );
   const menuRef = useRef<HTMLDivElement | null>(null);
+
+  const sensors = useSensors(
+    useSensor(PointerSensor, {
+      activationConstraint: { distance: 4 },
+    }),
+  );
 
   const color = getFolderColor(activeStatus, folders);
   const label = getFolderLabel(activeStatus, folders);
@@ -49,11 +72,16 @@ export function AdminIdeaList({
   }, []);
 
   const sorted = useMemo(() => {
-    const base = [...items].sort((a, b) => Number(b.id) - Number(a.id));
+    const byId = new Map(items.map((i) => [i.id, i]));
+    const ordered = localOrder
+      .map((id) => byId.get(id))
+      .filter((i): i is IdeaItem => i !== undefined);
+    const rest = items.filter((i) => !localOrder.includes(i.id));
+    const base = [...ordered, ...rest];
     if (!query.trim()) return base;
     const q = query.toLowerCase();
     return base.filter((i) => i.label.toLowerCase().includes(q));
-  }, [items, query]);
+  }, [items, localOrder, query]);
 
   const displayItems = sorted.map((i) => {
     const l = i.label;
@@ -61,6 +89,24 @@ export function AdminIdeaList({
     if (idx === -1) return l;
     return l.slice(0, idx);
   });
+
+  const handleItemSelect = (item: string, index: number) => {
+    selectAction({ item, index });
+  };
+
+  const handleDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event;
+    if (!over) return;
+    if (active.id === over.id) return;
+
+    const activeIndex = localOrder.indexOf(String(active.id));
+    const overIndex = localOrder.indexOf(String(over.id));
+    if (activeIndex === -1 || overIndex === -1) return;
+
+    const newOrder = arrayMove(localOrder, activeIndex, overIndex);
+    setLocalOrder(newOrder);
+    reorderIdeasAction({ orderedIds: newOrder });
+  };
 
   return (
     <div className="relative col-span-5 px-2">
@@ -120,7 +166,7 @@ export function AdminIdeaList({
 
       <div
         className={`rounded-2xl border border-zinc-900 bg-[#060010] transition ${
-          creationOpen ? "blur-sm pointer-events-none" : ""
+          creationOpen ? "pointer-events-none blur-sm" : ""
         }`}
       >
         {displayItems.length === 0 ? (
@@ -132,15 +178,24 @@ export function AdminIdeaList({
             pour en ajouter une.
           </div>
         ) : (
-          <AnimatedList
-            items={displayItems}
-            onItemSelect={(item, index) => selectAction({ item, index })}
-            showGradients
-            enableArrowNavigation
-            displayScrollbar
-            className="w-full"
-            itemClassName="border-l-2 border-transparent hover:border-[#5227FF] transition-colors"
-          />
+          <DndContext sensors={sensors} onDragEnd={handleDragEnd}>
+            <SortableContext
+              items={localOrder}
+              strategy={verticalListSortingStrategy}
+            >
+              <div className="flex justify-center py-4">
+                <AnimatedList
+                  items={displayItems}
+                  onItemSelect={handleItemSelect}
+                  showGradients
+                  enableArrowNavigation
+                  displayScrollbar
+                  className=""
+                  itemClassName="bg-[#111827] border-l-2 border-transparent hover:border-[#5227FF] transition-colors"
+                />
+              </div>
+            </SortableContext>
+          </DndContext>
         )}
       </div>
     </div>
