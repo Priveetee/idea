@@ -10,7 +10,6 @@ import {
 } from "@dnd-kit/core";
 import {
   BASE_FOLDERS,
-  INITIAL_IDEAS,
   type IdeaStatus,
   type IdeaItem,
   type FolderConfig,
@@ -19,6 +18,7 @@ import { AdminHeader } from "./_components/admin-header";
 import { AdminSidebar } from "./_components/admin-sidebar";
 import { AdminIdeaList } from "./_components/admin-idea-list";
 import { AdminIdeaPanel } from "./_components/admin-idea-panel";
+import { useIdeaStore } from "./_providers/idea-store";
 
 type SelectedIdea = {
   status: IdeaStatus | string;
@@ -46,7 +46,7 @@ function generateIdeaId(existing: IdeaItem[]): string {
 
 export default function AdminPage() {
   const [folders, setFolders] = useState<FolderConfig[]>(BASE_FOLDERS);
-  const [ideas, setIdeas] = useState<IdeaItem[]>(INITIAL_IDEAS);
+  const { ideas, setIdeas } = useIdeaStore();
   const [activeStatus, setActiveStatus] = useState<IdeaStatus | string>(
     "INBOX",
   );
@@ -88,18 +88,20 @@ export default function AdminPage() {
     label: string;
     status: IdeaStatus | string;
   }) => {
-    const newId = generateIdeaId(ideas);
-    const idea: IdeaItem = {
-      id: newId,
-      status: payload.status,
-      label: payload.label,
-      managerSummary: "",
-      managerContent: "",
-      managerLinks: [],
-      managerBullets: [],
-      managerNote: "",
-    };
-    setIdeas((prev) => [...prev, idea]);
+    setIdeas((prev) => {
+      const newId = generateIdeaId(prev);
+      const idea: IdeaItem = {
+        id: newId,
+        status: payload.status,
+        label: payload.label,
+        managerSummary: "",
+        managerContent: "",
+        managerLinks: [],
+        managerBullets: [],
+        managerNote: "",
+      };
+      return [...prev, idea];
+    });
   };
 
   const handleRenameIdea = (id: string, label: string) => {
