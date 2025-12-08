@@ -6,6 +6,7 @@ import { z } from "zod";
 import { useIdeaStore } from "@/app/admin/_providers/idea-store";
 import type { IdeaItem, IdeaLink } from "@/lib/mock-data";
 import { IdeaNewFields } from "./idea-new-fields";
+import { RichPreviewText } from "./rich-preview-text";
 
 const ideaFormSchema = z.object({
   tgi: z
@@ -212,17 +213,31 @@ export function IdeaNewForm() {
         <div className="mb-3 text-[11px] uppercase tracking-[0.16em] text-zinc-500">
           Aperçu dans l&apos;Inbox
         </div>
+
         <div className="rounded-xl bg-[#111] px-3 py-3 text-[13px] text-zinc-100">
           {previewLabel}
         </div>
+
+        <div className="mt-4 space-y-2">
+          {description.trim() ? (
+            <RichPreviewText text={description} />
+          ) : (
+            <div className="text-[11px] text-zinc-500">
+              Ajoutez quelques lignes de contexte pour que votre manager
+              comprenne rapidement l&apos;idée. Les liens que vous collez seront
+              reconnus automatiquement.
+            </div>
+          )}
+        </div>
+
         {!hasAnyMeta && (
-          <div className="mt-3 text-[11px] text-zinc-500">
+          <div className="mt-4 text-[11px] text-zinc-500">
             Vous pouvez ajouter un impact, une complexité ou un tag pour aider
             votre manager à prioriser.
           </div>
         )}
         {hasAnyMeta && (
-          <div className="mt-3 text-[11px] text-zinc-500">
+          <div className="mt-4 text-[11px] text-zinc-500">
             Ces informations seront visibles dans l&apos;Inbox admin.
           </div>
         )}
