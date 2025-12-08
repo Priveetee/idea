@@ -9,10 +9,39 @@ import { HubIdeaCard } from "./_components/hub-idea-card";
 
 type FilterStatus = "ALL" | "INBOX" | "DEV" | "ARCHIVE";
 
+type ReactionMap = Record<string, string[]>;
+
+const REACTIONS_STORAGE_KEY = "idea-hub-reactions";
+
+function loadReactions(): ReactionMap {
+  if (typeof window === "undefined") return {};
+  try {
+    const raw = window.localStorage.getItem(REACTIONS_STORAGE_KEY);
+    if (!raw) return {};
+    const parsed = JSON.parse(raw) as ReactionMap;
+    if (!parsed || typeof parsed !== "object") return {};
+    return parsed;
+  } catch {
+    return {};
+  }
+}
+
+function saveReactions(map: ReactionMap) {
+  if (typeof window === "undefined") return;
+  try {
+    window.localStorage.setItem(REACTIONS_STORAGE_KEY, JSON.stringify(map));
+  } catch {
+    // ignore
+  }
+}
+
 export default function HubPage() {
   const { ideas } = useIdeaStore();
   const [status, setStatus] = useState<FilterStatus>("ALL");
   const [query, setQuery] = useState("");
+  const [reactions, setReactions] = useState<ReactionMap>(() =>
+    loadReactions(),
+  );
 
   const filteredIdeas = useMemo(() => {
     const base =
@@ -23,6 +52,20 @@ export default function HubPage() {
     const q = query.toLowerCase();
     return base.filter((idea) => idea.label.toLowerCase().includes(q));
   }, [ideas, status, query]);
+
+  const handleAddReaction = (ideaId: string, text: string) => {
+    setReactions((prev) => {
+      const current = prev[ideaId] ?? [];
+      const nextText = text.trim();
+      if (!nextText) return prev;
+      const updated: ReactionMap = {
+        ...prev,
+        [ideaId]: [...current, nextText].slice(-6),
+      };
+      saveReactions(updated);
+      return updated;
+    });
+  };
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-[#050509] text-white">
@@ -62,9 +105,14 @@ export default function HubPage() {
             Aucune idée ne correspond à ce filtre pour le moment.
           </div>
         ) : (
-          <div className="mt-4 space-y-3">
+          <div className="mt-4 space-y-4">
             {filteredIdeas.map((idea: IdeaItem) => (
-              <HubIdeaCard key={idea.id} idea={idea} />
+              <HubIdeaCard
+                key={idea.id}
+                idea={idea}
+                reactions={reactions[idea.id] ?? []}
+                addReaction={(text) => handleAddReaction(idea.id, text)}
+              />
             ))}
           </div>
         )}
