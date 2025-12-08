@@ -78,15 +78,8 @@ export function IdeaNewFields({
 
       <div className="space-y-6">
         <div className="grid grid-cols-3 gap-4">
-          <div className="col-span-1 space-y-2">
-            <div className="flex items-center justify-between">
-              <div className="text-[12px] text-zinc-300">Identifiant TGI</div>
-              {fieldError.tgi && (
-                <span className="text-[10px] text-red-400">
-                  {fieldError.tgi}
-                </span>
-              )}
-            </div>
+          <div className="col-span-1 space-y-1.5">
+            <div className="text-[12px] text-zinc-300">Identifiant TGI</div>
             <input
               value={tgi}
               onChange={(e) => setTgi(e.target.value.toUpperCase())}
@@ -97,28 +90,26 @@ export function IdeaNewFields({
                   : "border-zinc-700 focus:border-[#5227FF]"
               }`}
             />
-            <p className="text-[11px] text-zinc-500">
-              Format&nbsp;: T + 7 chiffres. Si vous ne le connaissez pas, votre
-              manager pourra le compléter plus tard.
-            </p>
+            {fieldError.tgi ? (
+              <div className="text-[10px] text-red-400">{fieldError.tgi}</div>
+            ) : (
+              <p className="text-[11px] text-zinc-500">
+                Format&nbsp;: T + 7 chiffres. Si vous ne le connaissez pas,
+                votre manager pourra le compléter plus tard.
+              </p>
+            )}
           </div>
-          <div className="col-span-2 space-y-2">
+
+          <div className="col-span-2 space-y-1.5">
             <div className="flex items-center justify-between">
               <div className="text-[12px] text-zinc-300">Titre</div>
-              <div className="flex items-center gap-2">
-                <span
-                  className={`text-[10px] ${
-                    titleTooLong ? "text-red-400" : "text-zinc-500"
-                  }`}
-                >
-                  {titleLength}/200
-                </span>
-                {fieldError.title && (
-                  <span className="text-[10px] text-red-400">
-                    {fieldError.title}
-                  </span>
-                )}
-              </div>
+              <span
+                className={`text-[10px] ${
+                  titleTooLong ? "text-red-400" : "text-zinc-500"
+                }`}
+              >
+                {titleLength}/200
+              </span>
             </div>
             <textarea
               value={title}
@@ -132,6 +123,9 @@ export function IdeaNewFields({
                   : "border-zinc-700 focus:border-[#5227FF]"
               }`}
             />
+            {fieldError.title && (
+              <div className="text-[10px] text-red-400">{fieldError.title}</div>
+            )}
           </div>
         </div>
 
@@ -169,6 +163,7 @@ export function IdeaNewFields({
               ))}
             </div>
           </div>
+
           <div className="space-y-2">
             <div className="text-zinc-400">Complexité (optionnel)</div>
             <div className="flex flex-wrap gap-2">
@@ -192,6 +187,7 @@ export function IdeaNewFields({
               ))}
             </div>
           </div>
+
           <div className="space-y-2">
             <div className="text-zinc-400">Tag (optionnel)</div>
             <input
@@ -220,6 +216,7 @@ export function IdeaNewFields({
               Ajouter
             </button>
           </div>
+
           {links.length > 0 && (
             <div className="mt-2 space-y-1 rounded-xl border border-zinc-800 bg-zinc-950/60 px-2 py-2">
               {links.map((link) => {
@@ -267,7 +264,7 @@ export function IdeaNewFields({
           )}
         </div>
 
-        {error && <div className="text-[11px] text-red-400">{error}</div>}
+        {error && <div className="text-[11px] text-zinc-400">{error}</div>}
 
         <div className="mt-2 flex justify-end gap-2 text-[11px]">
           <button

@@ -22,17 +22,13 @@ type IdeaFormValues = z.infer<typeof ideaFormSchema>;
 
 function generateIdeaId(existing: IdeaItem[]): string {
   let i = existing.length + 1;
-  while (existing.some((idea) => idea.id === String(i))) {
-    i += 1;
-  }
+  while (existing.some((idea) => idea.id === String(i))) i += 1;
   return String(i);
 }
 
 function generateLinkId(existing: IdeaLink[]): string {
   let i = existing.length + 1;
-  while (existing.some((link) => link.id === String(i))) {
-    i += 1;
-  }
+  while (existing.some((link) => link.id === String(i))) i += 1;
   return String(i);
 }
 
@@ -73,7 +69,6 @@ export function IdeaNewForm() {
 
     if (!result.success) {
       const issues = result.error.issues;
-      const first = issues[0];
       const byPath: { tgi?: string; title?: string } = {};
 
       issues.forEach((issue) => {
@@ -83,9 +78,7 @@ export function IdeaNewForm() {
       });
 
       setFieldError(byPath);
-      setError(
-        first?.message ?? "Vérifiez les champs du formulaire avant d’envoyer.",
-      );
+      setError(null);
       return null;
     }
 
@@ -101,7 +94,6 @@ export function IdeaNewForm() {
     setSubmitting(true);
 
     const metaParts: string[] = [];
-
     if (data.impact) metaParts.push(`Impact: ${data.impact}`);
     if (data.complexity) metaParts.push(`Complexité: ${data.complexity}`);
     if (data.tag) metaParts.push(`Tag: ${data.tag}`);
@@ -152,11 +144,7 @@ export function IdeaNewForm() {
       const host = new URL(url).hostname.replace(/^www\./i, "");
       const label = host;
       const newId = generateLinkId(links);
-      const link: IdeaLink = {
-        id: newId,
-        label,
-        url,
-      };
+      const link: IdeaLink = { id: newId, label, url };
       setLinks((prev) => [...prev, link]);
       setLinkDraft("");
     } catch {
