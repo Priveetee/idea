@@ -22,6 +22,8 @@ function getStatusMeta(status: IdeaStatus | string): {
   return { label: String(status), color: "#6b7280" };
 }
 
+const QUICK_REACTIONS = ["👍", "💡", "❓", "🔥"];
+
 export function HubIdeaCard({
   idea,
   reactions,
@@ -45,6 +47,10 @@ export function HubIdeaCard({
       addReaction(text);
       target.value = "";
     }
+  };
+
+  const handleQuickReaction = (emoji: string) => {
+    addReaction(emoji);
   };
 
   return (
@@ -148,14 +154,26 @@ export function HubIdeaCard({
       <div className="mt-3 rounded-2xl border border-zinc-900 bg-[#050509] px-4 py-3 text-[12px] text-zinc-200">
         <div className="mb-2 flex items-center justify-between text-[10px] uppercase tracking-[0.16em] text-zinc-500">
           <span>Réactions</span>
-          <span className="text-zinc-600">
-            Local, non partagé (mock collaboration)
-          </span>
+          <span className="text-zinc-600">Mock local (non partagé)</span>
         </div>
+
+        <div className="mb-2 flex flex-wrap gap-1">
+          {QUICK_REACTIONS.map((emoji) => (
+            <button
+              key={emoji}
+              type="button"
+              onClick={() => handleQuickReaction(emoji)}
+              className="rounded-full bg-zinc-900 px-2 py-1 text-[13px] hover:bg-zinc-800"
+            >
+              {emoji}
+            </button>
+          ))}
+        </div>
+
         {reactions.length === 0 ? (
           <div className="mb-2 text-[11px] text-zinc-500">
-            Vous pouvez ajouter une courte réaction pour garder une trace de vos
-            idées ou questions.
+            Ajoutez une réaction rapide ou une courte note pour garder une trace
+            de vos idées ou questions.
           </div>
         ) : (
           <div className="mb-2 flex flex-wrap gap-1">
@@ -170,9 +188,10 @@ export function HubIdeaCard({
             ))}
           </div>
         )}
+
         <input
           type="text"
-          placeholder="Ajouter une réaction et appuyer sur Entrée..."
+          placeholder="Ou écrivez une réaction et appuyez sur Entrée..."
           className="mt-1 h-8 w-full rounded-xl border border-zinc-800 bg-zinc-950 px-3 text-[11px] text-zinc-100 outline-none focus:border-[#5227FF]"
           onKeyDown={handleReactionKeyDown}
         />
