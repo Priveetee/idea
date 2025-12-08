@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, KeyboardEvent } from "react";
+import { useRef, useState, KeyboardEvent } from "react";
 import { useRouter } from "next/navigation";
 import { z } from "zod";
 import { useIdeaStore } from "@/app/admin/_providers/idea-store";
@@ -55,6 +55,12 @@ export function IdeaNewForm() {
     title?: string;
   }>({});
   const [submitting, setSubmitting] = useState(false);
+
+  const titleRef = useRef<HTMLTextAreaElement | null>(null);
+
+  const isTgiRoughlyValid = /^T[0-9]{7}$/.test(tgi.trim());
+  const isTitleRoughlyValid = title.trim().length > 0;
+  const isFormRoughlyValid = isTgiRoughlyValid && isTitleRoughlyValid;
 
   const validate = (): IdeaFormValues | null => {
     const formValues: IdeaFormValues = {
@@ -122,6 +128,14 @@ export function IdeaNewForm() {
     router.push(`/idea/${newId}`);
   };
 
+  const handleTgiChange = (value: string) => {
+    setTgi(value.toUpperCase());
+    const trimmed = value.toUpperCase().trim();
+    if (/^T[0-9]{7}$/.test(trimmed) && !title.trim() && titleRef.current) {
+      titleRef.current.focus();
+    }
+  };
+
   const handleTitleKeyDown = (e: KeyboardEvent<HTMLTextAreaElement>) => {
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
@@ -182,9 +196,10 @@ export function IdeaNewForm() {
       <div className="flex-1 rounded-3xl border border-zinc-900 bg-[#060010] px-8 py-7 text-sm shadow-[0_0_40px_rgba(0,0,0,0.45)]">
         <IdeaNewFields
           tgi={tgi}
-          setTgi={setTgi}
+          setTgi={handleTgiChange}
           title={title}
           setTitle={setTitle}
+          titleRef={titleRef}
           description={description}
           setDescription={setDescription}
           impact={impact}
@@ -203,6 +218,7 @@ export function IdeaNewForm() {
           submitting={submitting}
           titleLength={titleLength}
           titleTooLong={titleTooLong}
+          isFormRoughlyValid={isFormRoughlyValid}
           onSubmit={handleSubmit}
           onTitleKeyDown={handleTitleKeyDown}
           onDescriptionKeyDown={handleDescriptionKeyDown}
@@ -223,9 +239,10 @@ export function IdeaNewForm() {
             <RichPreviewText text={description} />
           ) : (
             <div className="text-[11px] text-zinc-500">
-              Ajoutez quelques lignes de contexte pour que votre manager
-              comprenne rapidement l&apos;idée. Les liens que vous collez seront
-              reconnus automatiquement.
+              Par exemple&nbsp;: &quot;Nous perdons 2 jours à chaque onboarding
+              développeur. Voir ce guide interne
+              https://intranet/guide-onboarding-dev et cette vidéo
+              https://youtube.com/...&quot;.
             </div>
           )}
         </div>

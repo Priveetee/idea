@@ -1,6 +1,6 @@
 "use client";
 
-import type { KeyboardEvent } from "react";
+import type { KeyboardEvent, RefObject } from "react";
 import type { IdeaLink } from "@/lib/mock-data";
 import { getLinkMeta } from "@/lib/link-icons";
 
@@ -14,6 +14,7 @@ type IdeaNewFieldsProps = {
   setTgi: (_: string) => void;
   title: string;
   setTitle: (_: string) => void;
+  titleRef: RefObject<HTMLTextAreaElement | null>;
   description: string;
   setDescription: (_: string) => void;
   impact: "" | "faible" | "moyen" | "fort";
@@ -32,6 +33,7 @@ type IdeaNewFieldsProps = {
   submitting: boolean;
   titleLength: number;
   titleTooLong: boolean;
+  isFormRoughlyValid: boolean;
   onSubmit: () => void;
   onTitleKeyDown: (_: KeyboardEvent<HTMLTextAreaElement>) => void;
   onDescriptionKeyDown: (_: KeyboardEvent<HTMLTextAreaElement>) => void;
@@ -42,6 +44,7 @@ export function IdeaNewFields({
   setTgi,
   title,
   setTitle,
+  titleRef,
   description,
   setDescription,
   impact,
@@ -60,6 +63,7 @@ export function IdeaNewFields({
   submitting,
   titleLength,
   titleTooLong,
+  isFormRoughlyValid,
   onSubmit,
   onTitleKeyDown,
   onDescriptionKeyDown,
@@ -82,7 +86,7 @@ export function IdeaNewFields({
             <div className="text-[12px] text-zinc-300">Identifiant TGI</div>
             <input
               value={tgi}
-              onChange={(e) => setTgi(e.target.value.toUpperCase())}
+              onChange={(e) => setTgi(e.target.value)}
               placeholder="T0000001"
               className={`h-9 w-full rounded-xl border bg-zinc-950 px-3 text-[13px] text-zinc-100 outline-none ${
                 fieldError.tgi
@@ -112,6 +116,7 @@ export function IdeaNewFields({
               </span>
             </div>
             <textarea
+              ref={titleRef}
               value={title}
               onChange={(e) => setTitle(e.target.value)}
               onKeyDown={onTitleKeyDown}
@@ -136,7 +141,7 @@ export function IdeaNewFields({
             value={description}
             onChange={(e) => setDescription(e.target.value)}
             onKeyDown={onDescriptionKeyDown}
-            placeholder="Ajoutez du contexte : pourquoi maintenant, quelles observations, quels exemples, quelles contraintes..."
+            placeholder="Par exemple : « Nous perdons 2 jours à chaque onboarding développeur. Voir ce guide interne https://intranet/guide-onboarding-dev et cette vidéo https://youtube.com/... »."
             className="h-28 w-full rounded-xl border border-zinc-700 bg-zinc-950 px-3 py-2 text-[13px] text-zinc-100 outline-none focus:border-[#5227FF]"
           />
         </div>
@@ -281,7 +286,9 @@ export function IdeaNewFields({
             className={`rounded-md px-4 py-1 font-medium text-white transition ${
               submitting
                 ? "cursor-wait bg-[#3f21c9]"
-                : "bg-[#5227FF] hover:bg-[#3f21c9]"
+                : isFormRoughlyValid
+                  ? "bg-[#5227FF] hover:bg-[#3f21c9]"
+                  : "bg-zinc-800 text-zinc-400 hover:bg-zinc-800"
             }`}
           >
             Envoyer l&apos;idée
