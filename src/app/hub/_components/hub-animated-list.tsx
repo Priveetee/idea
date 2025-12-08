@@ -9,7 +9,7 @@ import React, {
   UIEvent,
   useMemo,
 } from "react";
-import { motion, useInView } from "motion/react";
+import { motion, LayoutGroup } from "motion/react";
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { RiDragMove2Fill } from "react-icons/ri";
@@ -19,93 +19,89 @@ export type HubAnimatedListItem = {
   label: string;
 };
 
-interface BaseAnimatedItemProps {
+interface StaticItemProps {
   children: ReactNode;
-  delay?: number;
-  index: number;
-  onMouseEnter?: MouseEventHandler<HTMLDivElement>;
   onClick?: MouseEventHandler<HTMLDivElement>;
   onDoubleClick?: MouseEventHandler<HTMLDivElement>;
+  className?: string;
+  index: number;
 }
 
-const BaseAnimatedItem: React.FC<BaseAnimatedItemProps> = ({
+const StaticItem = ({
   children,
-  delay = 0,
-  index,
-  onMouseEnter,
   onClick,
   onDoubleClick,
-}) => {
-  const ref = useRef<HTMLDivElement>(null);
-  const inView = useInView(ref, { amount: 0.1, once: true });
-
+  className,
+  index,
+}: StaticItemProps) => {
   return (
     <motion.div
-      ref={ref}
-      data-index={index}
-      onMouseEnter={onMouseEnter}
-      onClick={onClick}
-      onDoubleClick={onDoubleClick}
-      initial={{ y: 20, opacity: 0 }}
-      animate={inView ? { y: 0, opacity: 1 } : { y: 20, opacity: 0 }}
+      layout="position"
+      initial={{ opacity: 0, y: 20 }}
+      whileInView={{ opacity: 1, y: 0 }}
+      viewport={{ once: true, margin: "0px 0px -50px 0px" }}
       transition={{
         duration: 0.3,
-        delay,
-        type: "spring",
-        stiffness: 200,
-        damping: 20,
+        ease: "easeOut",
+        delay: Math.min((index % 10) * 0.03, 0.3),
       }}
-      className="cursor-default"
+      onClick={onClick}
+      onDoubleClick={onDoubleClick}
+      className={className}
     >
       {children}
     </motion.div>
   );
 };
 
-type SortableWrapperProps = {
+interface SortableItemProps extends StaticItemProps {
   id: string;
-  children: ReactNode;
-  enabled: boolean;
-};
+}
 
-function SortableWrapper({ id, children, enabled }: SortableWrapperProps) {
-  const { setNodeRef, transform, transition } = useSortable({ id });
-
-  if (!enabled) return <>{children}</>;
+const SortableItem = ({
+  id,
+  children,
+  onClick,
+  onDoubleClick,
+  className,
+}: SortableItemProps) => {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id });
 
   const style = {
     transform: CSS.Transform.toString(transform),
     transition,
+    zIndex: isDragging ? 50 : "auto",
+    opacity: isDragging ? 0.5 : 1,
   };
 
   return (
-    <div ref={setNodeRef} style={style} className="relative">
-      {children}
+    <div
+      ref={setNodeRef}
+      style={style}
+      className={`relative touch-none ${className}`}
+    >
+      <motion.div layout onClick={onClick} onDoubleClick={onDoubleClick}>
+        {children}
+      </motion.div>
+
+      <button
+        type="button"
+        {...attributes}
+        {...listeners}
+        className="absolute right-3 top-3 z-10 cursor-grab rounded-md bg-zinc-900/50 p-1.5 text-zinc-400 opacity-0 backdrop-blur-sm transition hover:bg-zinc-800 hover:text-zinc-100 group-hover:opacity-100"
+      >
+        <RiDragMove2Fill className="h-4 w-4" />
+      </button>
     </div>
   );
-}
-
-type DragHandleProps = {
-  id: string;
-  enabled: boolean;
 };
-
-function DragHandle({ id, enabled }: DragHandleProps) {
-  const { attributes, listeners } = useSortable({ id });
-
-  if (!enabled) return null;
-
-  return (
-    <button
-      type="button"
-      {...attributes}
-      {...listeners}
-      className="absolute right-3 top-3 z-10 cursor-grab rounded-md bg-zinc-900/50 p-1.5 text-zinc-400 opacity-0 backdrop-blur-sm transition hover:bg-zinc-800 hover:text-zinc-100 group-hover:opacity-100"
-    >
-      <RiDragMove2Fill className="h-4 w-4" />
-    </button>
-  );
-}
 
 interface HubAnimatedListProps {
   items?: string[] | HubAnimatedListItem[];
@@ -165,14 +161,18 @@ export const HubAnimatedList: React.FC<HubAnimatedListProps> = ({
     if (layout === "grid") return;
     const { scrollTop, scrollHeight, clientHeight } =
       e.target as HTMLDivElement;
-    setTopGradientOpacity(Math.min(scrollTop / 50, 1));
+
+    const newTop = Math.min(scrollTop / 50, 1);
+    if (Math.abs(newTop - topGradientOpacity) > 0.1)
+      setTopGradientOpacity(newTop);
+
     const bottomDistance = scrollHeight - (scrollTop + clientHeight);
-    setBottomGradientOpacity(
-      scrollHeight <= clientHeight ? 0 : Math.min(bottomDistance / 50, 1),
-    );
+    const newBottom =
+      scrollHeight <= clientHeight ? 0 : Math.min(bottomDistance / 50, 1);
+    if (Math.abs(newBottom - bottomGradientOpacity) > 0.1)
+      setBottomGradientOpacity(newBottom);
   };
 
-  // Ajout de 2xl:columns-4 pour les grands écrans
   const listStyles =
     layout === "list"
       ? `max-h-[600px] overflow-y-auto p-1 ${displayScrollbar ? "[&::-webkit-scrollbar]:w-[6px] [&::-webkit-scrollbar-thumb]:bg-zinc-800 [&::-webkit-scrollbar-thumb]:rounded-full" : "scrollbar-hide"}`
@@ -181,31 +181,48 @@ export const HubAnimatedList: React.FC<HubAnimatedListProps> = ({
   return (
     <div className={`relative ${className}`}>
       <div ref={listRef} className={listStyles} onScroll={handleScroll}>
-        {displayItems.map((item, index) => (
-          <SortableWrapper key={item.id} id={item.id} enabled={enableDrag}>
-            <div
-              className={`group relative ${layout === "grid" ? "break-inside-avoid mb-6" : "mb-3"}`}
-            >
-              <BaseAnimatedItem
+        <LayoutGroup>
+          {displayItems.map((item, index) => {
+            const content = (
+              <div className={itemClassName}>
+                {renderItem ? (
+                  renderItem(item, index)
+                ) : (
+                  <div className="rounded-xl border border-zinc-800 bg-zinc-900/50 p-4 text-zinc-200">
+                    {item.label}
+                  </div>
+                )}
+              </div>
+            );
+
+            if (!enableDrag) {
+              return (
+                <StaticItem
+                  key={item.id}
+                  index={index}
+                  className={`group ${layout === "grid" ? "break-inside-avoid mb-6" : "mb-3"}`}
+                  onClick={() => handleItemClick(item, index)}
+                  onDoubleClick={() => handleItemDouble(item, index)}
+                >
+                  {content}
+                </StaticItem>
+              );
+            }
+
+            return (
+              <SortableItem
+                key={item.id}
+                id={item.id}
                 index={index}
-                delay={0.05 * (index % 10)}
+                className={`group ${layout === "grid" ? "break-inside-avoid mb-6" : "mb-3"}`}
                 onClick={() => handleItemClick(item, index)}
                 onDoubleClick={() => handleItemDouble(item, index)}
               >
-                <div className={`${itemClassName}`}>
-                  {renderItem ? (
-                    renderItem(item, index)
-                  ) : (
-                    <div className="rounded-xl border border-zinc-800 bg-zinc-900/50 p-4 text-zinc-200">
-                      {item.label}
-                    </div>
-                  )}
-                </div>
-              </BaseAnimatedItem>
-              <DragHandle id={item.id} enabled={enableDrag} />
-            </div>
-          </SortableWrapper>
-        ))}
+                {content}
+              </SortableItem>
+            );
+          })}
+        </LayoutGroup>
       </div>
 
       {layout === "list" && showGradients && (
