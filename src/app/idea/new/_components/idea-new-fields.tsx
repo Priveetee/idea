@@ -11,23 +11,23 @@ type FieldErrors = {
 
 type IdeaNewFieldsProps = {
   tgi: string;
-  setTgi: (_: string) => void;
+  setTgi: (_value: string) => void;
   title: string;
-  setTitle: (_: string) => void;
+  setTitle: (_value: string) => void;
   titleRef: RefObject<HTMLTextAreaElement | null>;
   description: string;
-  setDescription: (_: string) => void;
+  setDescription: (_value: string) => void;
   impact: "" | "faible" | "moyen" | "fort";
-  setImpact: (_: "" | "faible" | "moyen" | "fort") => void;
+  setImpact: (_value: "" | "faible" | "moyen" | "fort") => void;
   complexity: "" | "faible" | "moyenne" | "forte";
-  setComplexity: (_: "" | "faible" | "moyenne" | "forte") => void;
+  setComplexity: (_value: "" | "faible" | "moyenne" | "forte") => void;
   tag: string;
-  setTag: (_: string) => void;
+  setTag: (_value: string) => void;
   links: IdeaLink[];
   linkDraft: string;
-  setLinkDraft: (_: string) => void;
+  setLinkDraft: (_value: string) => void;
   addLink: () => void;
-  removeLink: (_: string) => void;
+  removeLink: (_id: string) => void;
   fieldError: FieldErrors;
   error: string | null;
   submitting: boolean;
@@ -35,8 +35,8 @@ type IdeaNewFieldsProps = {
   titleTooLong: boolean;
   isFormRoughlyValid: boolean;
   onSubmit: () => void;
-  onTitleKeyDown: (_: KeyboardEvent<HTMLTextAreaElement>) => void;
-  onDescriptionKeyDown: (_: KeyboardEvent<HTMLTextAreaElement>) => void;
+  onTitleKeyDown: (_event: KeyboardEvent<HTMLTextAreaElement>) => void;
+  onDescriptionKeyDown: (_event: KeyboardEvent<HTMLTextAreaElement>) => void;
 };
 
 export function IdeaNewFields({
@@ -98,8 +98,7 @@ export function IdeaNewFields({
               <div className="text-[10px] text-red-400">{fieldError.tgi}</div>
             ) : (
               <p className="text-[11px] text-zinc-500">
-                Format&nbsp;: T + 7 chiffres. Si vous ne le connaissez pas,
-                votre manager pourra le compléter plus tard.
+                Veuillez saisir votre identifiant TGI.
               </p>
             )}
           </div>
