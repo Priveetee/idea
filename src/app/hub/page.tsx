@@ -6,6 +6,10 @@ import { useIdeaStore } from "@/app/admin/_providers/idea-store";
 import type { IdeaItem } from "@/lib/mock-data";
 import { HubFilters } from "./_components/hub-filters";
 import { HubIdeaCard } from "./_components/hub-idea-card";
+import {
+  HubAnimatedList,
+  type HubAnimatedListItem,
+} from "./_components/hub-animated-list";
 
 type FilterStatus = "ALL" | "INBOX" | "DEV" | "ARCHIVE";
 
@@ -13,7 +17,7 @@ type ReactionMap = Record<string, string[]>;
 
 const REACTIONS_STORAGE_KEY = "idea-hub-reactions";
 
-function loadReactions(): ReactionMap {
+function loadInitialReactions(): ReactionMap {
   if (typeof window === "undefined") return {};
   try {
     const raw = window.localStorage.getItem(REACTIONS_STORAGE_KEY);
@@ -40,7 +44,7 @@ export default function HubPage() {
   const [status, setStatus] = useState<FilterStatus>("ALL");
   const [query, setQuery] = useState("");
   const [reactions, setReactions] = useState<ReactionMap>(() =>
-    loadReactions(),
+    loadInitialReactions(),
   );
 
   const filteredIdeas = useMemo(() => {
@@ -66,6 +70,11 @@ export default function HubPage() {
       return updated;
     });
   };
+
+  const listItems: HubAnimatedListItem[] = filteredIdeas.map((idea) => ({
+    id: idea.id,
+    label: idea.label,
+  }));
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-[#050509] text-white">
@@ -105,16 +114,26 @@ export default function HubPage() {
             Aucune idée ne correspond à ce filtre pour le moment.
           </div>
         ) : (
-          <div className="mt-4 space-y-4">
-            {filteredIdeas.map((idea: IdeaItem) => (
-              <HubIdeaCard
-                key={idea.id}
-                idea={idea}
-                reactions={reactions[idea.id] ?? []}
-                addReaction={(text) => handleAddReaction(idea.id, text)}
-              />
-            ))}
-          </div>
+          <HubAnimatedList
+            items={listItems}
+            enableDrag={false}
+            showGradients
+            enableArrowNavigation={false}
+            className="mt-4"
+            displayScrollbar
+            renderItem={(item) => {
+              const idea = filteredIdeas.find(
+                (i) => i.id === item.id,
+              ) as IdeaItem;
+              return (
+                <HubIdeaCard
+                  idea={idea}
+                  reactions={reactions[idea.id] ?? []}
+                  addReaction={(text) => handleAddReaction(idea.id, text)}
+                />
+              );
+            }}
+          />
         )}
       </div>
     </div>

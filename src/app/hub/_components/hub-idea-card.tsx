@@ -24,6 +24,24 @@ function getStatusMeta(status: IdeaStatus | string): {
 
 const QUICK_REACTIONS = ["👍", "💡", "❓", "🔥"];
 
+type StackedReaction = {
+  value: string;
+  count: number;
+};
+
+function stackReactions(raw: string[]): StackedReaction[] {
+  const map = new Map<string, number>();
+  raw.forEach((r) => {
+    const key = r.trim();
+    if (!key) return;
+    map.set(key, (map.get(key) ?? 0) + 1);
+  });
+  return Array.from(map.entries()).map(([value, count]) => ({
+    value,
+    count,
+  }));
+}
+
 export function HubIdeaCard({
   idea,
   reactions,
@@ -52,6 +70,8 @@ export function HubIdeaCard({
   const handleQuickReaction = (emoji: string) => {
     addReaction(emoji);
   };
+
+  const stacked = stackReactions(reactions);
 
   return (
     <div className="rounded-3xl border border-zinc-900 bg-[#060010] px-5 py-4 text-[13px] text-zinc-100 shadow-[0_0_32px_rgba(0,0,0,0.7)]">
@@ -170,20 +190,20 @@ export function HubIdeaCard({
           ))}
         </div>
 
-        {reactions.length === 0 ? (
+        {stacked.length === 0 ? (
           <div className="mb-2 text-[11px] text-zinc-500">
             Ajoutez une réaction rapide ou une courte note pour garder une trace
             de vos idées ou questions.
           </div>
         ) : (
           <div className="mb-2 flex flex-wrap gap-1">
-            {reactions.map((reaction, index) => (
+            {stacked.map((r) => (
               <span
-                key={`${reaction}-${index}`}
+                key={`${r.value}-${r.count}`}
                 className="max-w-[220px] truncate rounded-full bg-zinc-900 px-3 py-1 text-[11px] text-zinc-200"
-                title={reaction}
+                title={r.value}
               >
-                {reaction}
+                {r.value} {r.count > 1 ? `×${r.count}` : ""}
               </span>
             ))}
           </div>
