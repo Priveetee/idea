@@ -115,7 +115,9 @@ export function IdeaNewForm() {
     };
 
     setIdeas((prev) => [...prev, idea]);
-    router.push(`/idea/${newId}`);
+
+    // Redirection vers le hub global après création
+    router.push("/hub");
   };
 
   const handleTgiChange = (value: string) => {
