@@ -4,7 +4,7 @@ import { useState, KeyboardEvent } from "react";
 import { useRouter } from "next/navigation";
 import { z } from "zod";
 import { useIdeaStore } from "@/app/admin/_providers/idea-store";
-import type { IdeaItem } from "@/lib/mock-data";
+import type { IdeaItem, IdeaLink } from "@/lib/mock-data";
 import { IdeaNewFields } from "./idea-new-fields";
 
 const ideaFormSchema = z.object({
@@ -28,6 +28,14 @@ function generateIdeaId(existing: IdeaItem[]): string {
   return String(i);
 }
 
+function generateLinkId(existing: IdeaLink[]): string {
+  let i = existing.length + 1;
+  while (existing.some((link) => link.id === String(i))) {
+    i += 1;
+  }
+  return String(i);
+}
+
 export function IdeaNewForm() {
   const router = useRouter();
   const { ideas, setIdeas } = useIdeaStore();
@@ -40,6 +48,10 @@ export function IdeaNewForm() {
     "" | "faible" | "moyenne" | "forte"
   >("");
   const [tag, setTag] = useState("");
+
+  const [links, setLinks] = useState<IdeaLink[]>([]);
+  const [linkDraft, setLinkDraft] = useState("");
+
   const [error, setError] = useState<string | null>(null);
   const [fieldError, setFieldError] = useState<{
     tgi?: string;
@@ -108,7 +120,7 @@ export function IdeaNewForm() {
       label: finalLabel,
       managerSummary: "",
       managerContent: data.description ?? "",
-      managerLinks: [],
+      managerLinks: links,
       managerBullets: [],
       managerNote: "",
     };
@@ -130,6 +142,30 @@ export function IdeaNewForm() {
       e.preventDefault();
       handleSubmit();
     }
+  };
+
+  const handleAddLink = () => {
+    const raw = linkDraft.trim();
+    if (!raw) return;
+    try {
+      const url = new URL(raw).toString();
+      const host = new URL(url).hostname.replace(/^www\./i, "");
+      const label = host;
+      const newId = generateLinkId(links);
+      const link: IdeaLink = {
+        id: newId,
+        label,
+        url,
+      };
+      setLinks((prev) => [...prev, link]);
+      setLinkDraft("");
+    } catch {
+      setError("L’URL du lien n’est pas valide.");
+    }
+  };
+
+  const handleRemoveLink = (id: string) => {
+    setLinks((prev) => prev.filter((l) => l.id !== id));
   };
 
   const previewLabel = (() => {
@@ -168,6 +204,11 @@ export function IdeaNewForm() {
           setComplexity={setComplexity}
           tag={tag}
           setTag={setTag}
+          links={links}
+          linkDraft={linkDraft}
+          setLinkDraft={setLinkDraft}
+          addLink={handleAddLink}
+          removeLink={handleRemoveLink}
           fieldError={fieldError}
           error={error}
           submitting={submitting}

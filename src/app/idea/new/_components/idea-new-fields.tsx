@@ -1,6 +1,8 @@
 "use client";
 
 import type { KeyboardEvent } from "react";
+import type { IdeaLink } from "@/lib/mock-data";
+import { getLinkMeta } from "@/lib/link-icons";
 
 type FieldErrors = {
   tgi?: string;
@@ -20,6 +22,11 @@ type IdeaNewFieldsProps = {
   setComplexity: (_: "" | "faible" | "moyenne" | "forte") => void;
   tag: string;
   setTag: (_: string) => void;
+  links: IdeaLink[];
+  linkDraft: string;
+  setLinkDraft: (_: string) => void;
+  addLink: () => void;
+  removeLink: (_: string) => void;
   fieldError: FieldErrors;
   error: string | null;
   submitting: boolean;
@@ -43,6 +50,11 @@ export function IdeaNewFields({
   setComplexity,
   tag,
   setTag,
+  links,
+  linkDraft,
+  setLinkDraft,
+  addLink,
+  removeLink,
   fieldError,
   error,
   submitting,
@@ -54,21 +66,13 @@ export function IdeaNewFields({
 }: IdeaNewFieldsProps) {
   return (
     <>
-      <div className="mb-5 flex items-center justify-between">
-        <div>
-          <div className="text-xs uppercase tracking-[0.16em] text-zinc-500">
-            Nouvelle idée TGI
-          </div>
-          <div className="mt-1 text-[13px] text-zinc-400">
-            Décrivez votre idée en quelques minutes, le reste se fera dans
-            l&apos;espace d&apos;administration.
-          </div>
+      <div className="mb-5">
+        <div className="text-xs uppercase tracking-[0.16em] text-zinc-500">
+          Nouvelle idée TGI
         </div>
-        <div className="hidden items-center gap-2 text-[10px] text-zinc-500 md:flex">
-          <span className="inline-flex h-1.5 w-1.5 rounded-full bg-[#22c55e]" />
-          <span>1. Identifiant &amp; titre</span>
-          <span className="opacity-50">·</span>
-          <span className="opacity-70">2. Détails (optionnel)</span>
+        <div className="mt-1 text-[13px] text-zinc-400">
+          Décrivez votre idée en quelques minutes, nous ferons le reste dans
+          l&apos;espace d&apos;administration.
         </div>
       </div>
 
@@ -197,6 +201,54 @@ export function IdeaNewFields({
               className="h-9 w-full rounded-xl border border-zinc-700 bg-zinc-950 px-3 text-[12px] text-zinc-100 outline-none focus:border-[#5227FF]"
             />
           </div>
+        </div>
+
+        <div className="space-y-2">
+          <div className="text-[12px] text-zinc-300">Liens (optionnels)</div>
+          <div className="flex gap-2">
+            <input
+              value={linkDraft}
+              onChange={(e) => setLinkDraft(e.target.value)}
+              placeholder="Collez un lien : GitHub, article, vidéo, outil..."
+              className="h-9 flex-1 rounded-xl border border-zinc-700 bg-zinc-950 px-3 text-[12px] text-zinc-100 outline-none focus:border-[#5227FF]"
+            />
+            <button
+              type="button"
+              onClick={addLink}
+              className="h-9 rounded-xl bg-[#1f2937] px-3 text-[11px] text-zinc-100 hover:bg-[#111827]"
+            >
+              Ajouter
+            </button>
+          </div>
+          {links.length > 0 && (
+            <div className="mt-2 space-y-1 rounded-xl border border-zinc-800 bg-zinc-950/60 px-2 py-2">
+              {links.map((link) => {
+                const meta = getLinkMeta(link.url);
+                const Icon = meta.icon;
+                return (
+                  <div
+                    key={link.id}
+                    className="flex items-center justify-between gap-2 rounded-lg px-2 py-1 text-[11px] text-zinc-200 hover:bg-zinc-900/80"
+                  >
+                    <div className="flex items-center gap-2 truncate">
+                      <Icon className="h-3.5 w-3.5 text-zinc-400" />
+                      <span className="truncate text-zinc-100">
+                        {meta.label}
+                      </span>
+                      <span className="truncate text-zinc-500">{link.url}</span>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => removeLink(link.id)}
+                      className="rounded-md px-2 py-0.5 text-[10px] text-zinc-500 hover:bg-zinc-800 hover:text-zinc-100"
+                    >
+                      Retirer
+                    </button>
+                  </div>
+                );
+              })}
+            </div>
+          )}
         </div>
 
         {error && <div className="text-[11px] text-red-400">{error}</div>}
