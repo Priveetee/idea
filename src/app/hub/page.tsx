@@ -34,9 +34,7 @@ function saveReactions(map: ReactionMap) {
   if (typeof window === "undefined") return;
   try {
     window.localStorage.setItem(REACTIONS_STORAGE_KEY, JSON.stringify(map));
-  } catch {
-    // ignore
-  }
+  } catch {}
 }
 
 export default function HubPage() {
@@ -77,67 +75,69 @@ export default function HubPage() {
   }));
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-[#050509] text-white">
-      <div className="w-full max-w-7xl px-8 py-10">
-        <div className="mb-8 flex items-end justify-between border-b border-zinc-900 pb-6">
+    <div className="flex h-screen flex-col overflow-hidden bg-[#050509] text-white">
+      <div className="shrink-0 border-b border-zinc-900 bg-[#050509]/80 px-6 py-6 backdrop-blur-md md:px-10">
+        <div className="mx-auto flex w-full max-w-[2000px] flex-col justify-between gap-6 md:flex-row md:items-end">
           <div>
             <div className="text-xs font-medium uppercase tracking-[0.2em] text-[#5227FF]">
               Idea Hub
             </div>
-            <h1 className="mt-1 text-4xl font-bold tracking-tight text-white">
+            <h1 className="mt-1 text-3xl font-bold tracking-tight text-white md:text-4xl">
               Mur des idées
             </h1>
-            <p className="mt-2 text-[13px] text-zinc-400">
-              Découvrez, réagissez et contribuez aux propositions de l equipe.
-            </p>
           </div>
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-4">
             <Link
               href="/idea/new"
-              className="group relative flex h-9 items-center gap-2 overflow-hidden rounded-full bg-white px-4 text-[13px] font-semibold text-black transition hover:bg-zinc-200"
+              className="group relative flex h-9 items-center gap-2 overflow-hidden rounded-full bg-white px-5 text-[13px] font-bold text-black transition hover:bg-zinc-200"
             >
               <span>Proposer une idée</span>
             </Link>
           </div>
         </div>
 
-        <HubFilters
-          status={status}
-          onStatusChange={setStatus}
-          query={query}
-          onQueryChange={setQuery}
-        />
-
-        {filteredIdeas.length === 0 ? (
-          <div className="mt-20 flex flex-col items-center justify-center gap-4 text-center">
-            <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-zinc-900/50">
-              <span className="text-2xl">🌪️</span>
-            </div>
-            <div className="text-sm text-zinc-500">
-              Aucune idée trouvée pour ce filtre.
-            </div>
-          </div>
-        ) : (
-          <HubAnimatedList
-            layout="grid"
-            items={listItems}
-            enableDrag={false}
-            showGradients={false}
-            className="mt-8"
-            renderItem={(item) => {
-              const idea = filteredIdeas.find(
-                (i) => i.id === item.id,
-              ) as IdeaItem;
-              return (
-                <HubIdeaCard
-                  idea={idea}
-                  reactions={reactions[idea.id] ?? []}
-                  addReaction={(text) => handleAddReaction(idea.id, text)}
-                />
-              );
-            }}
+        <div className="mx-auto mt-6 max-w-[2000px]">
+          <HubFilters
+            status={status}
+            onStatusChange={setStatus}
+            query={query}
+            onQueryChange={setQuery}
           />
-        )}
+        </div>
+      </div>
+
+      <div className="flex-1 overflow-y-auto px-6 py-8 md:px-10">
+        <div className="mx-auto max-w-[2000px]">
+          {filteredIdeas.length === 0 ? (
+            <div className="mt-20 flex flex-col items-center justify-center gap-6 text-center">
+              <div className="flex h-20 w-20 items-center justify-center rounded-3xl bg-zinc-900/50">
+                <span className="text-3xl">🌪️</span>
+              </div>
+              <div className="max-w-md text-[15px] text-zinc-500">
+                Aucune idée ne correspond à votre recherche.
+              </div>
+            </div>
+          ) : (
+            <HubAnimatedList
+              layout="grid"
+              items={listItems}
+              enableDrag={false}
+              showGradients={false}
+              renderItem={(item) => {
+                const idea = filteredIdeas.find(
+                  (i) => i.id === item.id,
+                ) as IdeaItem;
+                return (
+                  <HubIdeaCard
+                    idea={idea}
+                    reactions={reactions[idea.id] ?? []}
+                    addReaction={(text) => handleAddReaction(idea.id, text)}
+                  />
+                );
+              }}
+            />
+          )}
+        </div>
       </div>
     </div>
   );

@@ -172,10 +172,11 @@ export const HubAnimatedList: React.FC<HubAnimatedListProps> = ({
     );
   };
 
+  // Ajout de 2xl:columns-4 pour les grands écrans
   const listStyles =
     layout === "list"
       ? `max-h-[600px] overflow-y-auto p-1 ${displayScrollbar ? "[&::-webkit-scrollbar]:w-[6px] [&::-webkit-scrollbar-thumb]:bg-zinc-800 [&::-webkit-scrollbar-thumb]:rounded-full" : "scrollbar-hide"}`
-      : "columns-1 md:columns-2 xl:columns-3 gap-6 space-y-6 pb-20";
+      : "columns-1 md:columns-2 lg:columns-3 2xl:columns-4 gap-6 space-y-6 pb-20";
 
   return (
     <div className={`relative ${className}`}>
