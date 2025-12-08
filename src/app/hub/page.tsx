@@ -15,7 +15,8 @@ type FilterStatus = "ALL" | "INBOX" | "DEV" | "ARCHIVE";
 
 type ReactionMap = Record<string, string[]>;
 
-const REACTIONS_STORAGE_KEY = "idea-hub-reactions";
+// J'ai changé le nom de la clé pour forcer un reset des données locales
+const REACTIONS_STORAGE_KEY = "idea-hub-reactions-v2";
 
 function loadInitialReactions(): ReactionMap {
   if (typeof window === "undefined") return {};
