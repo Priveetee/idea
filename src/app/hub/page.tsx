@@ -15,8 +15,7 @@ type FilterStatus = "ALL" | "INBOX" | "DEV" | "ARCHIVE";
 
 type ReactionMap = Record<string, string[]>;
 
-// J'ai changé le nom de la clé pour forcer un reset des données locales
-const REACTIONS_STORAGE_KEY = "idea-hub-reactions-v2";
+const REACTIONS_STORAGE_KEY = "idea-hub-reactions-v3";
 
 function loadInitialReactions(): ReactionMap {
   if (typeof window === "undefined") return {};
@@ -45,8 +44,10 @@ export default function HubPage() {
   const [status, setStatus] = useState<FilterStatus>("ALL");
   const [query, setQuery] = useState("");
   const [reactions, setReactions] = useState<ReactionMap>({});
+  const [isMounted, setIsMounted] = useState(false);
 
   useEffect(() => {
+    setIsMounted(true);
     setReactions(loadInitialReactions());
   }, []);
 
@@ -60,14 +61,21 @@ export default function HubPage() {
     return base.filter((idea) => idea.label.toLowerCase().includes(q));
   }, [ideas, status, query]);
 
-  const handleAddReaction = (ideaId: string, text: string) => {
+  const handleToggleReaction = (ideaId: string, emoji: string) => {
     setReactions((prev) => {
       const current = prev[ideaId] ?? [];
-      const nextText = text.trim();
-      if (!nextText) return prev;
-      const updated: ReactionMap = {
+      const exists = current.includes(emoji);
+
+      let nextReactions;
+      if (exists) {
+        nextReactions = current.filter((e) => e !== emoji);
+      } else {
+        nextReactions = [...current, emoji];
+      }
+
+      const updated = {
         ...prev,
-        [ideaId]: [...current, nextText].slice(-20),
+        [ideaId]: nextReactions,
       };
       saveReactions(updated);
       return updated;
@@ -78,6 +86,8 @@ export default function HubPage() {
     id: idea.id,
     label: idea.label,
   }));
+
+  if (!isMounted) return null;
 
   return (
     <div className="flex h-screen flex-col overflow-hidden bg-[#050509] text-white">
@@ -136,7 +146,9 @@ export default function HubPage() {
                   <HubIdeaCard
                     idea={idea}
                     reactions={reactions[idea.id] ?? []}
-                    addReaction={(text) => handleAddReaction(idea.id, text)}
+                    onToggleReaction={(emoji) =>
+                      handleToggleReaction(idea.id, emoji)
+                    }
                   />
                 );
               }}

@@ -8,14 +8,15 @@ import { RichPreviewText } from "@/app/idea/new/_components/rich-preview-text";
 import {
   RiLinksLine,
   RiArrowRightUpLine,
-  RiEmojiStickerLine,
-  RiSendPlane2Fill,
+  RiAddLine,
+  RiSendPlaneFill,
 } from "react-icons/ri";
+import { AnimatePresence, motion } from "motion/react";
 
 type HubIdeaCardProps = {
   idea: IdeaItem;
   reactions: string[];
-  addReaction: (_text: string) => void;
+  onToggleReaction: (_emoji: string) => void;
 };
 
 const STATUS_CONFIG: Record<
@@ -24,9 +25,9 @@ const STATUS_CONFIG: Record<
 > = {
   INBOX: {
     label: "Inbox",
-    bg: "bg-blue-500/10",
-    text: "text-blue-400",
-    dot: "bg-blue-400",
+    bg: "bg-[#5227FF]/10",
+    text: "text-[#6b47ff]",
+    dot: "bg-[#6b47ff]",
   },
   DEV: {
     label: "En cours",
@@ -53,17 +54,14 @@ const EMOJI_PALETTE = [
   "❤️",
   "🔥",
   "🚀",
-  "🎉",
-  "💡",
-  "🎯",
+  "😂",
+  "😮",
+  "😢",
+  "🙏",
   "👀",
   "🤔",
-  "🙋♂️",
-  "⚠️",
-  "🛑",
-  "🐛",
-  "🔧",
-  "📉",
+  "💩",
+  "🤡",
 ];
 
 type StackedReaction = { value: string; count: number };
@@ -81,7 +79,7 @@ function stackReactions(raw: string[]): StackedReaction[] {
 export function HubIdeaCard({
   idea,
   reactions,
-  addReaction,
+  onToggleReaction,
 }: HubIdeaCardProps) {
   const [isPickerOpen, setIsPickerOpen] = useState(false);
   const pickerRef = useRef<HTMLDivElement>(null);
@@ -108,24 +106,20 @@ export function HubIdeaCard({
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  const handleKeyDown = (e: KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === "Enter") {
-      const target = e.target as HTMLInputElement;
-      const val = target.value.trim();
-      if (val) {
-        addReaction(val);
-        target.value = "";
-      }
-    }
-  };
-
   const onEmojiClick = (emoji: string) => {
-    addReaction(emoji);
+    onToggleReaction(emoji);
     setIsPickerOpen(false);
   };
 
+  const handleKeyDown = (e: KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === "Enter") {
+      const target = e.target as HTMLInputElement;
+      target.value = "";
+    }
+  };
+
   return (
-    <div className="group relative flex flex-col overflow-visible rounded-3xl border border-zinc-800/60 bg-[#0A0A0C] transition-all hover:-translate-y-1 hover:border-zinc-700 hover:shadow-2xl hover:shadow-zinc-900/50">
+    <div className="group relative flex flex-col overflow-visible rounded-3xl border border-zinc-800/60 bg-[#0A0A0C] transition-all duration-300 hover:border-zinc-700 hover:shadow-2xl hover:shadow-black/50">
       <div className="flex items-start justify-between p-5 pb-2">
         <div className="flex flex-wrap items-center gap-2">
           {tgi && (
@@ -207,58 +201,68 @@ export function HubIdeaCard({
       )}
 
       <div className="mt-auto px-5 pb-5 pt-5">
-        <div className="flex flex-wrap items-center gap-1.5 pb-4">
+        <div className="mb-3 flex flex-wrap items-center gap-2">
           {stacked.map((r) => (
             <button
               key={r.value}
-              onClick={() => addReaction(r.value)}
-              className="flex h-7 min-w-[28px] items-center justify-center gap-1.5 rounded-full border border-zinc-800 bg-zinc-900 px-2 text-[12px] font-medium text-zinc-300 transition hover:border-[#5227FF] hover:text-white"
+              onClick={() => onToggleReaction(r.value)}
+              className="group flex h-7 min-w-[36px] items-center justify-center gap-1.5 rounded-full border border-zinc-800 bg-[#121214] px-2.5 text-[13px] font-medium text-zinc-300 transition hover:border-[#5227FF] hover:bg-[#5227FF]/10 hover:text-white"
             >
-              <span>{r.value}</span>
-              <span className="text-[10px] text-zinc-500">{r.count}</span>
+              <span className="leading-none">{r.value}</span>
+              <span className="text-[10px] font-bold text-zinc-600 group-hover:text-[#5227FF]">
+                {r.count}
+              </span>
             </button>
           ))}
 
           <div className="relative" ref={pickerRef}>
             <button
               onClick={() => setIsPickerOpen(!isPickerOpen)}
-              className={`flex h-7 w-7 items-center justify-center rounded-full border transition ${
+              className={`flex h-7 w-8 items-center justify-center rounded-full border transition ${
                 isPickerOpen
-                  ? "border-[#5227FF] bg-[#5227FF]/10 text-[#5227FF]"
-                  : "border-zinc-800 bg-zinc-900/50 text-zinc-400 hover:border-zinc-700 hover:text-zinc-200"
+                  ? "border-zinc-700 bg-zinc-800 text-zinc-200"
+                  : "border-transparent bg-zinc-900/50 text-zinc-500 hover:bg-zinc-800 hover:text-zinc-300"
               }`}
             >
-              <RiEmojiStickerLine className="h-4 w-4" />
+              <RiAddLine className="h-4 w-4" />
             </button>
 
-            {isPickerOpen && (
-              <div className="absolute bottom-full left-0 z-50 mb-2 w-56 rounded-xl border border-zinc-800 bg-[#121214] p-2 shadow-2xl animate-in fade-in zoom-in-95 duration-200">
-                <div className="grid grid-cols-5 gap-1">
-                  {EMOJI_PALETTE.map((emoji) => (
-                    <button
-                      key={emoji}
-                      onClick={() => onEmojiClick(emoji)}
-                      className="flex aspect-square items-center justify-center rounded-lg text-lg transition hover:bg-zinc-800 hover:scale-110 active:scale-95"
-                    >
-                      {emoji}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            )}
+            <AnimatePresence>
+              {isPickerOpen && (
+                <motion.div
+                  initial={{ opacity: 0, scale: 0.95, y: 10 }}
+                  animate={{ opacity: 1, scale: 1, y: 0 }}
+                  exit={{ opacity: 0, scale: 0.95, y: 10 }}
+                  transition={{ duration: 0.1 }}
+                  className="absolute bottom-full left-0 z-50 mb-2 w-[180px] rounded-xl border border-zinc-800 bg-[#121214] p-2 shadow-2xl"
+                >
+                  <div className="grid grid-cols-4 gap-1">
+                    {EMOJI_PALETTE.map((emoji) => (
+                      <button
+                        key={emoji}
+                        onClick={() => onEmojiClick(emoji)}
+                        className="flex aspect-square items-center justify-center rounded-lg text-lg transition hover:bg-zinc-800 hover:scale-110 active:scale-95"
+                      >
+                        {emoji}
+                      </button>
+                    ))}
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
           </div>
         </div>
 
         <div className="relative flex items-center">
           <input
             type="text"
-            placeholder="Écrire un commentaire..."
-            className="h-9 w-full rounded-xl border border-zinc-800 bg-zinc-900/30 pl-3 pr-8 text-[12px] text-zinc-200 placeholder-zinc-600 outline-none transition focus:border-zinc-700 focus:bg-zinc-900"
+            placeholder="Ajouter un commentaire..."
+            className="h-9 w-full rounded-xl border border-zinc-800 bg-zinc-900/30 pl-3 pr-9 text-[12px] text-zinc-200 placeholder-zinc-600 outline-none transition focus:border-zinc-700 focus:bg-zinc-900"
             onKeyDown={handleKeyDown}
           />
-          <div className="absolute right-2 text-zinc-600">
-            <RiSendPlane2Fill className="h-4 w-4" />
-          </div>
+          <button className="absolute right-2 flex h-6 w-6 items-center justify-center rounded-lg text-zinc-600 transition hover:bg-[#5227FF] hover:text-white">
+            <RiSendPlaneFill className="h-3.5 w-3.5" />
+          </button>
         </div>
       </div>
     </div>
