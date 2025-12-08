@@ -174,8 +174,8 @@ export function IdeaNewForm() {
   if (tag.trim()) previewMetaParts.push(`Tag : ${tag.trim()}`);
 
   const hasMeta = previewMetaParts.length > 0;
-
   const hasAnyMeta = impact || complexity || tag.trim();
+
   const titleLength = title.trim().length;
   const titleTooLong = titleLength > 200;
 
@@ -221,13 +221,19 @@ export function IdeaNewForm() {
         <div className="rounded-xl bg-[#111] px-3 py-3 text-[13px] text-zinc-100">
           <div>{previewTitle}</div>
           {hasMeta && (
-            <div className="mt-2 inline-flex flex-wrap items-center gap-1 rounded-full bg-zinc-900 px-3 py-1 text-[11px] text-zinc-300">
-              {previewMetaParts.map((part, index) => (
-                <span key={part}>
-                  {index > 0 && <span className="mx-1 text-zinc-600">·</span>}
-                  <span>{part}</span>
-                </span>
-              ))}
+            <div className="mt-2 max-w-full">
+              <div className="inline-flex max-w-full flex-wrap items-center gap-1 rounded-full bg-zinc-900 px-3 py-1 text-[11px] text-zinc-300">
+                {previewMetaParts.map((part, index) => (
+                  <span key={`${part}-${index}`} className="flex items-center">
+                    {index > 0 && (
+                      <span className="mx-1 text-zinc-600 select-none">·</span>
+                    )}
+                    <span className="max-w-[220px] truncate" title={part}>
+                      {part}
+                    </span>
+                  </span>
+                ))}
+              </div>
             </div>
           )}
         </div>
@@ -273,7 +279,7 @@ export function IdeaNewForm() {
                     target="_blank"
                     rel="noreferrer noopener"
                     title={link.url}
-                    className="truncate text-zinc-500 underline-offset-2 hover:text-zinc-300 hover:underline"
+                    className="max-w-[180px] truncate text-zinc-500 underline-offset-2 hover:text-zinc-300 hover:underline"
                   >
                     {host}
                   </a>
