@@ -7,6 +7,7 @@ import { useIdeaStore } from "@/app/admin/_providers/idea-store";
 import type { IdeaItem, IdeaLink } from "@/lib/mock-data";
 import { IdeaNewFields } from "./idea-new-fields";
 import { RichPreviewText } from "./rich-preview-text";
+import { getLinkMeta } from "@/lib/link-icons";
 
 const ideaFormSchema = z.object({
   tgi: z
@@ -100,23 +101,12 @@ export function IdeaNewForm() {
 
     setSubmitting(true);
 
-    const metaParts: string[] = [];
-    if (data.impact) metaParts.push(`Impact: ${data.impact}`);
-    if (data.complexity) metaParts.push(`Complexité: ${data.complexity}`);
-    if (data.tag) metaParts.push(`Tag: ${data.tag}`);
-
-    const labelParts: string[] = [data.title];
-    if (metaParts.length > 0) labelParts.push(`(${metaParts.join(" · ")})`);
-
-    const baseLabel = labelParts.join(" ");
-    const finalLabel = `[${data.tgi}] ${baseLabel}`;
-
     const newId = generateIdeaId(ideas);
 
     const idea: IdeaItem = {
       id: newId,
       status: "INBOX",
-      label: finalLabel,
+      label: `[${data.tgi}] ${data.title}`,
       managerSummary: "",
       managerContent: data.description ?? "",
       managerLinks: links,
@@ -129,8 +119,9 @@ export function IdeaNewForm() {
   };
 
   const handleTgiChange = (value: string) => {
-    setTgi(value.toUpperCase());
-    const trimmed = value.toUpperCase().trim();
+    const upper = value.toUpperCase();
+    setTgi(upper);
+    const trimmed = upper.trim();
     if (/^T[0-9]{7}$/.test(trimmed) && !title.trim() && titleRef.current) {
       titleRef.current.focus();
     }
@@ -171,21 +162,18 @@ export function IdeaNewForm() {
     setLinks((prev) => prev.filter((l) => l.id !== id));
   };
 
-  const previewLabel = (() => {
-    if (!tgi && !title) return "[TXXXXXXX] Titre de votre idée";
-    const safeTgi = tgi || "T0000001";
+  const previewTitle = (() => {
+    const safeTgi = tgi || "TXXXXXXX";
     const base = title || "Titre de votre idée";
-
-    const meta: string[] = [];
-    if (impact) meta.push(`Impact: ${impact}`);
-    if (complexity) meta.push(`Complexité: ${complexity}`);
-    if (tag.trim()) meta.push(`Tag: ${tag.trim()}`);
-
-    const parts: string[] = [base];
-    if (meta.length > 0) parts.push(`(${meta.join(" · ")})`);
-
-    return `[${safeTgi}] ${parts.join(" ")}`;
+    return `[${safeTgi}] ${base}`;
   })();
+
+  const previewMetaParts: string[] = [];
+  if (impact) previewMetaParts.push(`Impact : ${impact}`);
+  if (complexity) previewMetaParts.push(`Complexité : ${complexity}`);
+  if (tag.trim()) previewMetaParts.push(`Tag : ${tag.trim()}`);
+
+  const hasMeta = previewMetaParts.length > 0;
 
   const hasAnyMeta = impact || complexity || tag.trim();
   const titleLength = title.trim().length;
@@ -231,7 +219,17 @@ export function IdeaNewForm() {
         </div>
 
         <div className="rounded-xl bg-[#111] px-3 py-3 text-[13px] text-zinc-100">
-          {previewLabel}
+          <div>{previewTitle}</div>
+          {hasMeta && (
+            <div className="mt-2 inline-flex flex-wrap items-center gap-1 rounded-full bg-zinc-900 px-3 py-1 text-[11px] text-zinc-300">
+              {previewMetaParts.map((part, index) => (
+                <span key={part}>
+                  {index > 0 && <span className="mx-1 text-zinc-600">·</span>}
+                  <span>{part}</span>
+                </span>
+              ))}
+            </div>
+          )}
         </div>
 
         <div className="mt-4 space-y-2">
@@ -239,13 +237,51 @@ export function IdeaNewForm() {
             <RichPreviewText text={description} />
           ) : (
             <div className="text-[11px] text-zinc-500">
-              Par exemple&nbsp;: &quot;Nous perdons 2 jours à chaque onboarding
+              Par exemple&nbsp;: « Nous perdons 2 jours à chaque onboarding
               développeur. Voir ce guide interne
               https://intranet/guide-onboarding-dev et cette vidéo
-              https://youtube.com/...&quot;.
+              https://youtube.com/... ».
             </div>
           )}
         </div>
+
+        {links.length > 0 && (
+          <div className="mt-4 space-y-1 rounded-xl border border-zinc-800 bg-zinc-950/60 px-2 py-2">
+            <div className="mb-1 text-[11px] uppercase tracking-[0.12em] text-zinc-500">
+              Liens de support
+            </div>
+            {links.map((link) => {
+              const meta = getLinkMeta(link.url);
+              const Icon = meta.icon;
+
+              let host = "";
+              try {
+                host = new URL(link.url).hostname.replace(/^www\./i, "");
+              } catch {
+                host = link.url;
+              }
+
+              return (
+                <div
+                  key={link.id}
+                  className="flex items-center gap-2 rounded-lg px-2 py-1 text-[11px] text-zinc-200"
+                >
+                  <Icon className="h-3.5 w-3.5 shrink-0 text-zinc-400" />
+                  <span className="shrink-0 text-zinc-100">{meta.label}</span>
+                  <a
+                    href={link.url}
+                    target="_blank"
+                    rel="noreferrer noopener"
+                    title={link.url}
+                    className="truncate text-zinc-500 underline-offset-2 hover:text-zinc-300 hover:underline"
+                  >
+                    {host}
+                  </a>
+                </div>
+              );
+            })}
+          </div>
+        )}
 
         {!hasAnyMeta && (
           <div className="mt-4 text-[11px] text-zinc-500">
