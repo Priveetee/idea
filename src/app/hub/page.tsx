@@ -44,11 +44,12 @@ export default function HubPage() {
   const [status, setStatus] = useState<FilterStatus>("ALL");
   const [query, setQuery] = useState("");
   const [reactions, setReactions] = useState<ReactionMap>({});
-  const [isMounted, setIsMounted] = useState(false);
 
   useEffect(() => {
-    setIsMounted(true);
-    setReactions(loadInitialReactions());
+    const timer = setTimeout(() => {
+      setReactions(loadInitialReactions());
+    }, 0);
+    return () => clearTimeout(timer);
   }, []);
 
   const filteredIdeas = useMemo(() => {
@@ -86,8 +87,6 @@ export default function HubPage() {
     id: idea.id,
     label: idea.label,
   }));
-
-  if (!isMounted) return null;
 
   return (
     <div className="flex h-screen flex-col overflow-hidden bg-[#050509] text-white">

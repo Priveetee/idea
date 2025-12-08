@@ -230,11 +230,11 @@ export function HubIdeaCard({
             <AnimatePresence>
               {isPickerOpen && (
                 <motion.div
-                  initial={{ opacity: 0, scale: 0.95, y: 10 }}
+                  initial={{ opacity: 0, scale: 0.95, y: -10 }}
                   animate={{ opacity: 1, scale: 1, y: 0 }}
-                  exit={{ opacity: 0, scale: 0.95, y: 10 }}
+                  exit={{ opacity: 0, scale: 0.95, y: -10 }}
                   transition={{ duration: 0.1 }}
-                  className="absolute bottom-full left-0 z-50 mb-2 w-[180px] rounded-xl border border-zinc-800 bg-[#121214] p-2 shadow-2xl"
+                  className="absolute left-0 top-full z-50 mt-2 w-[180px] rounded-xl border border-zinc-800 bg-[#121214] p-2 shadow-2xl"
                 >
                   <div className="grid grid-cols-4 gap-1">
                     {EMOJI_PALETTE.map((emoji) => (

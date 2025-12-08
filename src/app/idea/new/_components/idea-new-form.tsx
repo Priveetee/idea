@@ -116,7 +116,6 @@ export function IdeaNewForm() {
 
     setIdeas((prev) => [...prev, idea]);
 
-    // Redirection vers le hub global après création
     router.push("/hub");
   };
 
