@@ -113,11 +113,9 @@ interface HubAnimatedListProps {
   onItemDoubleClick?: (_item: HubAnimatedListItem, _index: number) => void;
   enableDrag?: boolean;
   showGradients?: boolean;
-  enableArrowNavigation?: boolean;
   className?: string;
   itemClassName?: string;
   displayScrollbar?: boolean;
-  initialSelectedIndex?: number;
   layout?: "list" | "grid";
   renderItem?: (_item: HubAnimatedListItem, _index: number) => ReactNode;
 }
@@ -128,11 +126,9 @@ export const HubAnimatedList: React.FC<HubAnimatedListProps> = ({
   onItemDoubleClick,
   enableDrag = false,
   showGradients = true,
-  enableArrowNavigation: _enableArrowNavigation,
   className = "",
   itemClassName = "",
   displayScrollbar = true,
-  initialSelectedIndex: _initialSelectedIndex,
   layout = "list",
   renderItem,
 }) => {
@@ -150,10 +146,6 @@ export const HubAnimatedList: React.FC<HubAnimatedListProps> = ({
     }
     return items as HubAnimatedListItem[];
   }, [items]);
-
-  const handleItemMouseEnter = useCallback((_index: number) => {
-    //
-  }, []);
 
   const handleItemClick = useCallback(
     (item: HubAnimatedListItem, index: number) => {
@@ -196,7 +188,6 @@ export const HubAnimatedList: React.FC<HubAnimatedListProps> = ({
               <BaseAnimatedItem
                 index={index}
                 delay={0.05 * (index % 10)}
-                onMouseEnter={() => handleItemMouseEnter(index)}
                 onClick={() => handleItemClick(item, index)}
                 onDoubleClick={() => handleItemDouble(item, index)}
               >

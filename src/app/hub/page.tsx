@@ -78,27 +78,26 @@ export default function HubPage() {
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-[#050509] text-white">
-      <div className="w-full max-w-6xl px-8 py-10">
-        <div className="mb-6 flex items-center justify-between">
+      <div className="w-full max-w-7xl px-8 py-10">
+        <div className="mb-8 flex items-end justify-between border-b border-zinc-900 pb-6">
           <div>
-            <div className="text-xs uppercase tracking-[0.16em] text-zinc-500">
-              Hub public des idées
+            <div className="text-xs font-medium uppercase tracking-[0.2em] text-[#5227FF]">
+              Idea Hub
             </div>
-            <h1 className="mt-2 text-2xl font-semibold text-zinc-50">
-              Idées proposées
+            <h1 className="mt-1 text-4xl font-bold tracking-tight text-white">
+              Mur des idées
             </h1>
+            <p className="mt-2 text-[13px] text-zinc-400">
+              Découvrez, réagissez et contribuez aux propositions de l equipe.
+            </p>
           </div>
-          <div className="flex items-center gap-3 text-[11px] text-zinc-400">
+          <div className="flex items-center gap-3">
             <Link
               href="/idea/new"
-              className="rounded-full bg-[#5227FF] px-4 py-1.5 text-[11px] font-medium text-white hover:bg-[#3f21c9]"
+              className="group relative flex h-9 items-center gap-2 overflow-hidden rounded-full bg-white px-4 text-[13px] font-semibold text-black transition hover:bg-zinc-200"
             >
-              Proposer une idée
+              <span>Proposer une idée</span>
             </Link>
-            <div className="inline-flex items-center gap-1 rounded-full border border-zinc-800 bg-zinc-950 px-3 py-1">
-              <span className="h-1.5 w-1.5 rounded-full bg-[#22c55e]" />
-              <span>{ideas.length} idée(s)</span>
-            </div>
           </div>
         </div>
 
@@ -110,17 +109,21 @@ export default function HubPage() {
         />
 
         {filteredIdeas.length === 0 ? (
-          <div className="mt-10 flex h-40 items-center justify-center rounded-3xl border border-dashed border-zinc-800 bg-[#050509] text-[12px] text-zinc-500">
-            Aucune idée ne correspond à ce filtre pour le moment.
+          <div className="mt-20 flex flex-col items-center justify-center gap-4 text-center">
+            <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-zinc-900/50">
+              <span className="text-2xl">🌪️</span>
+            </div>
+            <div className="text-sm text-zinc-500">
+              Aucune idée trouvée pour ce filtre.
+            </div>
           </div>
         ) : (
           <HubAnimatedList
+            layout="grid"
             items={listItems}
             enableDrag={false}
-            showGradients
-            enableArrowNavigation={false}
-            className="mt-4"
-            displayScrollbar
+            showGradients={false}
+            className="mt-8"
             renderItem={(item) => {
               const idea = filteredIdeas.find(
                 (i) => i.id === item.id,
