@@ -3,7 +3,6 @@
 import React, {
   useRef,
   useState,
-  useEffect,
   useCallback,
   ReactNode,
   MouseEventHandler,
@@ -38,7 +37,7 @@ const BaseAnimatedItem: React.FC<BaseAnimatedItemProps> = ({
   onDoubleClick,
 }) => {
   const ref = useRef<HTMLDivElement>(null);
-  const inView = useInView(ref, { amount: 0.5, once: false });
+  const inView = useInView(ref, { amount: 0.1, once: true });
 
   return (
     <motion.div
@@ -47,10 +46,16 @@ const BaseAnimatedItem: React.FC<BaseAnimatedItemProps> = ({
       onMouseEnter={onMouseEnter}
       onClick={onClick}
       onDoubleClick={onDoubleClick}
-      initial={{ scale: 0.7, opacity: 0 }}
-      animate={inView ? { scale: 1, opacity: 1 } : { scale: 0.7, opacity: 0 }}
-      transition={{ duration: 0.2, delay }}
-      className="mb-4 cursor-pointer"
+      initial={{ y: 20, opacity: 0 }}
+      animate={inView ? { y: 0, opacity: 1 } : { y: 20, opacity: 0 }}
+      transition={{
+        duration: 0.3,
+        delay,
+        type: "spring",
+        stiffness: 200,
+        damping: 20,
+      }}
+      className="cursor-default"
     >
       {children}
     </motion.div>
@@ -95,9 +100,9 @@ function DragHandle({ id, enabled }: DragHandleProps) {
       type="button"
       {...attributes}
       {...listeners}
-      className="absolute right-3 top-1/2 -translate-y-1/2 rounded-full border border-zinc-700 bg-zinc-900/80 p-1 text-[10px] text-zinc-400 opacity-0 transition hover:border-zinc-500 hover:text-zinc-100 group-hover:opacity-100"
+      className="absolute right-3 top-3 z-10 cursor-grab rounded-md bg-zinc-900/50 p-1.5 text-zinc-400 opacity-0 backdrop-blur-sm transition hover:bg-zinc-800 hover:text-zinc-100 group-hover:opacity-100"
     >
-      <RiDragMove2Fill className="h-3 w-3" />
+      <RiDragMove2Fill className="h-4 w-4" />
     </button>
   );
 }
@@ -113,25 +118,25 @@ interface HubAnimatedListProps {
   itemClassName?: string;
   displayScrollbar?: boolean;
   initialSelectedIndex?: number;
+  layout?: "list" | "grid";
   renderItem?: (_item: HubAnimatedListItem, _index: number) => ReactNode;
 }
 
 export const HubAnimatedList: React.FC<HubAnimatedListProps> = ({
-  items = ["Item 1", "Item 2", "Item 3"],
+  items = [],
   onItemSelect,
   onItemDoubleClick,
   enableDrag = false,
   showGradients = true,
-  enableArrowNavigation = true,
+  enableArrowNavigation: _enableArrowNavigation,
   className = "",
   itemClassName = "",
   displayScrollbar = true,
-  initialSelectedIndex = -1,
+  initialSelectedIndex: _initialSelectedIndex,
+  layout = "list",
   renderItem,
 }) => {
   const listRef = useRef<HTMLDivElement>(null);
-  const [selectedIndex, setSelectedIndex] =
-    useState<number>(initialSelectedIndex);
   const [topGradientOpacity, setTopGradientOpacity] = useState<number>(0);
   const [bottomGradientOpacity, setBottomGradientOpacity] = useState<number>(1);
 
@@ -146,13 +151,12 @@ export const HubAnimatedList: React.FC<HubAnimatedListProps> = ({
     return items as HubAnimatedListItem[];
   }, [items]);
 
-  const handleItemMouseEnter = useCallback((index: number) => {
-    setSelectedIndex(index);
+  const handleItemMouseEnter = useCallback((_index: number) => {
+    //
   }, []);
 
   const handleItemClick = useCallback(
     (item: HubAnimatedListItem, index: number) => {
-      setSelectedIndex(index);
       if (onItemSelect) onItemSelect(item, index);
     },
     [onItemSelect],
@@ -166,6 +170,7 @@ export const HubAnimatedList: React.FC<HubAnimatedListProps> = ({
   );
 
   const handleScroll = (e: UIEvent<HTMLDivElement>) => {
+    if (layout === "grid") return;
     const { scrollTop, scrollHeight, clientHeight } =
       e.target as HTMLDivElement;
     setTopGradientOpacity(Math.min(scrollTop / 50, 1));
@@ -175,94 +180,32 @@ export const HubAnimatedList: React.FC<HubAnimatedListProps> = ({
     );
   };
 
-  useEffect(() => {
-    if (!enableArrowNavigation) return;
-
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === "ArrowDown" || (e.key === "Tab" && !e.shiftKey)) {
-        e.preventDefault();
-        setSelectedIndex((prev) => Math.min(prev + 1, displayItems.length - 1));
-      } else if (e.key === "ArrowUp" || (e.key === "Tab" && e.shiftKey)) {
-        e.preventDefault();
-        setSelectedIndex((prev) => Math.max(prev - 1, 0));
-      } else if (e.key === "Enter") {
-        if (selectedIndex >= 0 && selectedIndex < displayItems.length) {
-          e.preventDefault();
-          if (onItemSelect) {
-            onItemSelect(displayItems[selectedIndex], selectedIndex);
-          }
-        }
-      }
-    };
-
-    window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [displayItems, selectedIndex, onItemSelect, enableArrowNavigation]);
-
-  useEffect(() => {
-    if (!enableArrowNavigation || !listRef.current) return;
-    if (selectedIndex < 0) return;
-
-    const container = listRef.current;
-    const selectedItem = container.querySelector(
-      `[data-index="${selectedIndex}"]`,
-    ) as HTMLElement | null;
-    if (!selectedItem) return;
-
-    const extraMargin = 50;
-    const containerScrollTop = container.scrollTop;
-    const containerHeight = container.clientHeight;
-    const itemTop = selectedItem.offsetTop;
-    const itemBottom = itemTop + selectedItem.offsetHeight;
-
-    if (itemTop < containerScrollTop + extraMargin) {
-      container.scrollTo({ top: itemTop - extraMargin, behavior: "smooth" });
-    } else if (
-      itemBottom >
-      containerScrollTop + containerHeight - extraMargin
-    ) {
-      container.scrollTo({
-        top: itemBottom - containerHeight + extraMargin,
-        behavior: "smooth",
-      });
-    }
-  }, [selectedIndex, enableArrowNavigation]);
+  const listStyles =
+    layout === "list"
+      ? `max-h-[600px] overflow-y-auto p-1 ${displayScrollbar ? "[&::-webkit-scrollbar]:w-[6px] [&::-webkit-scrollbar-thumb]:bg-zinc-800 [&::-webkit-scrollbar-thumb]:rounded-full" : "scrollbar-hide"}`
+      : "columns-1 md:columns-2 xl:columns-3 gap-6 space-y-6 pb-20";
 
   return (
     <div className={`relative ${className}`}>
-      <div
-        ref={listRef}
-        className={`max-h-[400px] overflow-y-auto p-4 ${
-          displayScrollbar
-            ? "[&::-webkit-scrollbar]:w-[8px] [&::-webkit-scrollbar-track]:bg-[#060010] [&::-webkit-scrollbar-thumb]:bg-[#222] [&::-webkit-scrollbar-thumb]:rounded-[4px]"
-            : "scrollbar-hide"
-        }`}
-        onScroll={handleScroll}
-        style={{
-          scrollbarWidth: displayScrollbar ? "thin" : "none",
-          scrollbarColor: "#222 #060010",
-        }}
-      >
+      <div ref={listRef} className={listStyles} onScroll={handleScroll}>
         {displayItems.map((item, index) => (
           <SortableWrapper key={item.id} id={item.id} enabled={enableDrag}>
-            <div className="group relative">
+            <div
+              className={`group relative ${layout === "grid" ? "break-inside-avoid mb-6" : "mb-3"}`}
+            >
               <BaseAnimatedItem
                 index={index}
-                delay={0.06 * index}
+                delay={0.05 * (index % 10)}
                 onMouseEnter={() => handleItemMouseEnter(index)}
                 onClick={() => handleItemClick(item, index)}
                 onDoubleClick={() => handleItemDouble(item, index)}
               >
-                <div
-                  className={`rounded-lg bg-[#111] p-0 ${
-                    selectedIndex === index ? "bg-[#222]" : ""
-                  } ${itemClassName}`}
-                >
+                <div className={`${itemClassName}`}>
                   {renderItem ? (
                     renderItem(item, index)
                   ) : (
-                    <div className="p-4">
-                      <p className="m-0 text-white">{item.label}</p>
+                    <div className="rounded-xl border border-zinc-800 bg-zinc-900/50 p-4 text-zinc-200">
+                      {item.label}
                     </div>
                   )}
                 </div>
@@ -272,14 +215,15 @@ export const HubAnimatedList: React.FC<HubAnimatedListProps> = ({
           </SortableWrapper>
         ))}
       </div>
-      {showGradients && (
+
+      {layout === "list" && showGradients && (
         <>
           <div
-            className="pointer-events-none absolute left-0 right-0 top-0 h-[50px] bg-gradient-to-b from-[#060010] to-transparent transition-opacity duration-300 ease"
+            className="pointer-events-none absolute left-0 right-0 top-0 h-12 bg-gradient-to-b from-[#050509] to-transparent transition-opacity duration-300"
             style={{ opacity: topGradientOpacity }}
           />
           <div
-            className="pointer-events-none absolute bottom-0 left-0 right-0 h-[100px] bg-gradient-to-t from-[#060010] to-transparent transition-opacity duration-300 ease"
+            className="pointer-events-none absolute bottom-0 left-0 right-0 h-24 bg-gradient-to-t from-[#050509] to-transparent transition-opacity duration-300"
             style={{ opacity: bottomGradientOpacity }}
           />
         </>

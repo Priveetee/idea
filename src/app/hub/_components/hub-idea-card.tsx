@@ -2,9 +2,17 @@
 
 import Link from "next/link";
 import type { KeyboardEvent } from "react";
-import type { IdeaItem, IdeaStatus } from "@/lib/mock-data";
+import type { IdeaItem } from "@/lib/mock-data";
 import { getLinkMeta } from "@/lib/link-icons";
 import { RichPreviewText } from "@/app/idea/new/_components/rich-preview-text";
+import {
+  RiThumbUpLine,
+  RiLightbulbLine,
+  RiQuestionMark,
+  RiFireLine,
+  RiLinksLine,
+  RiArrowRightUpLine,
+} from "react-icons/ri";
 
 type HubIdeaCardProps = {
   idea: IdeaItem;
@@ -12,22 +20,44 @@ type HubIdeaCardProps = {
   addReaction: (_text: string) => void;
 };
 
-function getStatusMeta(status: IdeaStatus | string): {
-  label: string;
-  color: string;
-} {
-  if (status === "INBOX") return { label: "Inbox", color: "#5227FF" };
-  if (status === "DEV") return { label: "En cours", color: "#22c55e" };
-  if (status === "ARCHIVE") return { label: "Archives", color: "#64748b" };
-  return { label: String(status), color: "#6b7280" };
-}
-
-const QUICK_REACTIONS = ["👍", "💡", "❓", "🔥"];
-
-type StackedReaction = {
-  value: string;
-  count: number;
+const STATUS_CONFIG: Record<
+  string,
+  { label: string; bg: string; text: string; dot: string }
+> = {
+  INBOX: {
+    label: "Inbox",
+    bg: "bg-blue-500/10",
+    text: "text-blue-400",
+    dot: "bg-blue-400",
+  },
+  DEV: {
+    label: "En cours",
+    bg: "bg-emerald-500/10",
+    text: "text-emerald-400",
+    dot: "bg-emerald-400",
+  },
+  ARCHIVE: {
+    label: "Archives",
+    bg: "bg-zinc-500/10",
+    text: "text-zinc-400",
+    dot: "bg-zinc-400",
+  },
+  DEFAULT: {
+    label: "Idée",
+    bg: "bg-zinc-500/10",
+    text: "text-zinc-400",
+    dot: "bg-zinc-400",
+  },
 };
+
+const REACTION_ICONS: Record<string, React.ElementType> = {
+  "👍": RiThumbUpLine,
+  "💡": RiLightbulbLine,
+  "❓": RiQuestionMark,
+  "🔥": RiFireLine,
+};
+
+type StackedReaction = { value: string; count: number };
 
 function stackReactions(raw: string[]): StackedReaction[] {
   const map = new Map<string, number>();
@@ -36,10 +66,7 @@ function stackReactions(raw: string[]): StackedReaction[] {
     if (!key) return;
     map.set(key, (map.get(key) ?? 0) + 1);
   });
-  return Array.from(map.entries()).map(([value, count]) => ({
-    value,
-    count,
-  }));
+  return Array.from(map.entries()).map(([value, count]) => ({ value, count }));
 }
 
 export function HubIdeaCard({
@@ -52,169 +79,142 @@ export function HubIdeaCard({
   const tgi = end === -1 ? null : label.slice(0, end + 1);
   const title = end === -1 ? label : label.slice(end + 1).trim();
 
-  const statusMeta = getStatusMeta(idea.status);
+  const status = STATUS_CONFIG[idea.status] ?? STATUS_CONFIG.DEFAULT;
   const links = idea.managerLinks ?? [];
-  const linksCount = links.length;
-  const hasRichContent = !!idea.managerContent?.trim() || linksCount > 0;
+  const stacked = stackReactions(reactions);
 
-  const handleReactionKeyDown = (e: KeyboardEvent<HTMLInputElement>) => {
+  const handleKeyDown = (e: KeyboardEvent<HTMLInputElement>) => {
     if (e.key === "Enter") {
       const target = e.target as HTMLInputElement;
-      const text = target.value.trim();
-      if (!text) return;
-      addReaction(text);
-      target.value = "";
+      const val = target.value.trim();
+      if (val) {
+        addReaction(val);
+        target.value = "";
+      }
     }
   };
 
-  const handleQuickReaction = (emoji: string) => {
-    addReaction(emoji);
-  };
-
-  const stacked = stackReactions(reactions);
-
   return (
-    <div className="rounded-3xl border border-zinc-900 bg-[#060010] px-5 py-4 text-[13px] text-zinc-100 shadow-[0_0_32px_rgba(0,0,0,0.7)]">
-      <div className="mb-2 flex items-center justify-between text-[11px] text-zinc-400">
-        <div className="flex items-center gap-2">
+    <div className="flex flex-col overflow-hidden rounded-3xl border border-zinc-800/60 bg-[#0A0A0C] shadow-xl transition-all hover:border-zinc-700 hover:shadow-2xl hover:shadow-zinc-900/50">
+      <div className="flex items-start justify-between p-5 pb-3">
+        <div className="flex flex-wrap items-center gap-2">
           {tgi && (
-            <span className="inline-flex items-center gap-1 rounded-full bg-zinc-900 px-2 py-0.5 font-mono text-[10px] text-zinc-200">
+            <span className="font-mono text-[10px] font-medium text-zinc-500">
               {tgi}
             </span>
           )}
           <span
-            className="inline-flex items-center gap-1 rounded-full bg-zinc-900 px-2 py-0.5 text-[10px]"
-            style={{ color: statusMeta.color }}
+            className={`inline-flex items-center gap-1.5 rounded-full px-2 py-0.5 text-[10px] font-medium ${status.bg} ${status.text}`}
           >
-            <span
-              className="h-1.5 w-1.5 rounded-full"
-              style={{ backgroundColor: statusMeta.color }}
-            />
-            {statusMeta.label}
+            <span className={`h-1.5 w-1.5 rounded-full ${status.dot}`} />
+            {status.label}
           </span>
-          {linksCount > 0 && (
-            <span className="inline-flex items-center gap-1 rounded-full bg-zinc-900 px-2 py-0.5 text-[10px] text-zinc-400">
-              {linksCount} lien(s)
-            </span>
-          )}
-          {hasRichContent && (
-            <span className="inline-flex items-center gap-1 rounded-full bg-emerald-900/40 px-2 py-0.5 text-[10px] text-emerald-300">
-              <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" />
-              Enrichie
-            </span>
-          )}
         </div>
-        <span className="text-zinc-500">ID interne&nbsp;: {idea.id}</span>
-      </div>
 
-      <Link
-        href={`/idea/${idea.id}`}
-        className="block text-[15px] font-medium text-zinc-50 hover:underline"
-      >
-        {title}
-      </Link>
-
-      <div className="mt-3 rounded-2xl border border-zinc-900 bg-[#050509] px-4 py-3">
-        <div className="mb-1 text-[10px] uppercase tracking-[0.16em] text-zinc-500">
-          Détail de l&apos;idée
-        </div>
-        {idea.managerContent ? (
-          <div className="line-clamp-4">
-            <RichPreviewText text={idea.managerContent} />
-          </div>
-        ) : (
-          <div className="text-[12px] text-zinc-500">
-            Aucun détail n&apos;a encore été ajouté pour cette idée.
+        {links.length > 0 && (
+          <div className="flex -space-x-2">
+            {links.slice(0, 3).map((l, i) => {
+              const Icon = getLinkMeta(l.url).icon;
+              return (
+                <div
+                  key={i}
+                  className="flex h-6 w-6 items-center justify-center rounded-full border border-[#0A0A0C] bg-zinc-800 text-zinc-400"
+                >
+                  <Icon className="h-3 w-3" />
+                </div>
+              );
+            })}
+            {links.length > 3 && (
+              <div className="flex h-6 w-6 items-center justify-center rounded-full border border-[#0A0A0C] bg-zinc-800 text-[9px] text-zinc-400">
+                +{links.length - 3}
+              </div>
+            )}
           </div>
         )}
       </div>
 
-      {linksCount > 0 && (
-        <div className="mt-3 rounded-2xl border border-zinc-900 bg-[#050509] px-4 py-3 text-[12px] text-zinc-200">
-          <div className="mb-1 text-[10px] uppercase tracking-[0.16em] text-zinc-500">
-            Liens
-          </div>
-          <div className="space-y-1">
-            {links.map((link) => {
-              const meta = getLinkMeta(link.url);
-              const Icon = meta.icon;
+      <div className="px-5">
+        <Link href={`/idea/${idea.id}`} className="group block">
+          <h3 className="text-lg font-semibold leading-snug text-zinc-100 decoration-zinc-500 underline-offset-4 group-hover:underline">
+            {title}
+          </h3>
+        </Link>
 
-              let host = "";
-              try {
-                host = new URL(link.url).hostname.replace(/^www\./i, "");
-              } catch {
-                host = link.url;
-              }
+        <div className="mt-3 line-clamp-4 text-[13px] leading-relaxed text-zinc-400">
+          {idea.managerContent ? (
+            <RichPreviewText text={idea.managerContent} />
+          ) : (
+            <span className="italic text-zinc-600">
+              Pas de description détaillée...
+            </span>
+          )}
+        </div>
+      </div>
 
-              return (
-                <div
-                  key={link.id}
-                  className="flex items-center justify-between gap-2 rounded-lg px-2 py-1 text-[11px] text-zinc-200 hover:bg-zinc-900/80"
-                >
-                  <div className="flex min-w-0 flex-1 items-center gap-2">
-                    <Icon className="h-3.5 w-3.5 shrink-0 text-zinc-400" />
-                    <span className="shrink-0 text-zinc-100">{meta.label}</span>
-                    <a
-                      href={link.url}
-                      target="_blank"
-                      rel="noreferrer noopener"
-                      title={link.url}
-                      className="truncate text-zinc-500 underline-offset-2 hover:text-zinc-300 hover:underline"
-                    >
-                      {host}
-                    </a>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
+      {links.length > 0 && (
+        <div className="mt-4 flex flex-wrap gap-2 px-5">
+          {links.slice(0, 2).map((link) => {
+            const meta = getLinkMeta(link.url);
+            let host = link.url;
+            try {
+              host = new URL(link.url).hostname.replace("www.", "");
+            } catch {
+              /* ignore */
+            }
+
+            return (
+              <a
+                key={link.id}
+                href={link.url}
+                target="_blank"
+                rel="noreferrer"
+                className="inline-flex max-w-full items-center gap-1.5 rounded-md bg-zinc-900/80 px-2 py-1 text-[10px] text-zinc-400 transition hover:bg-zinc-800 hover:text-zinc-200"
+              >
+                <RiLinksLine className="shrink-0" />
+                <span className="truncate max-w-[120px]">
+                  {meta.label || host}
+                </span>
+                <RiArrowRightUpLine className="shrink-0 opacity-50" />
+              </a>
+            );
+          })}
         </div>
       )}
 
-      <div className="mt-3 rounded-2xl border border-zinc-900 bg-[#050509] px-4 py-3 text-[12px] text-zinc-200">
-        <div className="mb-2 flex items-center justify-between text-[10px] uppercase tracking-[0.16em] text-zinc-500">
-          <span>Réactions</span>
-          <span className="text-zinc-600">Mock local (non partagé)</span>
-        </div>
-
-        <div className="mb-2 flex flex-wrap gap-1">
-          {QUICK_REACTIONS.map((emoji) => (
+      <div className="mt-auto px-5 pb-5 pt-4">
+        <div className="flex flex-wrap gap-1.5 pb-3">
+          {stacked.map((r) => (
             <button
-              key={emoji}
-              type="button"
-              onClick={() => handleQuickReaction(emoji)}
-              className="rounded-full bg-zinc-900 px-2 py-1 text-[13px] hover:bg-zinc-800"
+              key={r.value}
+              onClick={() => addReaction(r.value)}
+              className="inline-flex items-center gap-1 rounded-full border border-zinc-800 bg-zinc-900/50 px-2 py-1 text-[11px] font-medium text-zinc-300 hover:bg-zinc-800 hover:text-white"
             >
-              {emoji}
+              <span>{r.value}</span>
+              {r.count > 1 && <span className="text-zinc-500">{r.count}</span>}
             </button>
           ))}
         </div>
 
-        {stacked.length === 0 ? (
-          <div className="mb-2 text-[11px] text-zinc-500">
-            Ajoutez une réaction rapide ou une courte note pour garder une trace
-            de vos idées ou questions.
-          </div>
-        ) : (
-          <div className="mb-2 flex flex-wrap gap-1">
-            {stacked.map((r) => (
-              <span
-                key={`${r.value}-${r.count}`}
-                className="max-w-[220px] truncate rounded-full bg-zinc-900 px-3 py-1 text-[11px] text-zinc-200"
-                title={r.value}
+        <div className="flex items-center gap-2 rounded-xl bg-zinc-900/40 p-1 pl-1 pr-1">
+          <div className="flex shrink-0 gap-0.5 border-r border-zinc-800 pr-1">
+            {Object.entries(REACTION_ICONS).map(([emoji, Icon]) => (
+              <button
+                key={emoji}
+                onClick={() => addReaction(emoji)}
+                className="flex h-7 w-7 items-center justify-center rounded-lg text-zinc-500 transition hover:bg-zinc-800 hover:text-zinc-200"
+                title={emoji}
               >
-                {r.value} {r.count > 1 ? `×${r.count}` : ""}
-              </span>
+                <Icon className="h-4 w-4" />
+              </button>
             ))}
           </div>
-        )}
-
-        <input
-          type="text"
-          placeholder="Ou écrivez une réaction et appuyez sur Entrée..."
-          className="mt-1 h-8 w-full rounded-xl border border-zinc-800 bg-zinc-950 px-3 text-[11px] text-zinc-100 outline-none focus:border-[#5227FF]"
-          onKeyDown={handleReactionKeyDown}
-        />
+          <input
+            type="text"
+            placeholder="Réagir..."
+            className="h-7 min-w-0 flex-1 bg-transparent text-[13px] text-zinc-200 placeholder-zinc-600 outline-none"
+            onKeyDown={handleKeyDown}
+          />
+        </div>
       </div>
     </div>
   );
