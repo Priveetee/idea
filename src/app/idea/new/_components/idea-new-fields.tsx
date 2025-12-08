@@ -243,9 +243,15 @@ export function IdeaNewFields({
                       <span className="shrink-0 text-zinc-100">
                         {meta.label}
                       </span>
-                      <span className="shrink-0 text-zinc-500" title={link.url}>
+                      <a
+                        href={link.url}
+                        target="_blank"
+                        rel="noreferrer noopener"
+                        title={link.url}
+                        className="shrink-0 text-zinc-500 underline-offset-2 hover:text-zinc-300 hover:underline"
+                      >
                         {host}
-                      </span>
+                      </a>
                     </div>
                     <button
                       type="button"
