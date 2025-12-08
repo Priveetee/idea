@@ -225,22 +225,32 @@ export function IdeaNewFields({
               {links.map((link) => {
                 const meta = getLinkMeta(link.url);
                 const Icon = meta.icon;
+
+                let host = "";
+                try {
+                  host = new URL(link.url).hostname.replace(/^www\./i, "");
+                } catch {
+                  host = link.url;
+                }
+
                 return (
                   <div
                     key={link.id}
-                    className="flex items-center justify-between gap-2 rounded-lg px-2 py-1 text-[11px] text-zinc-200 hover:bg-zinc-900/80"
+                    className="flex items-center gap-2 rounded-lg px-2 py-1 text-[11px] text-zinc-200 hover:bg-zinc-900/80"
                   >
-                    <div className="flex items-center gap-2 truncate">
-                      <Icon className="h-3.5 w-3.5 text-zinc-400" />
-                      <span className="truncate text-zinc-100">
+                    <div className="flex min-w-0 flex-1 items-center gap-2">
+                      <Icon className="h-3.5 w-3.5 shrink-0 text-zinc-400" />
+                      <span className="shrink-0 text-zinc-100">
                         {meta.label}
                       </span>
-                      <span className="truncate text-zinc-500">{link.url}</span>
+                      <span className="shrink-0 text-zinc-500" title={link.url}>
+                        {host}
+                      </span>
                     </div>
                     <button
                       type="button"
                       onClick={() => removeLink(link.id)}
-                      className="rounded-md px-2 py-0.5 text-[10px] text-zinc-500 hover:bg-zinc-800 hover:text-zinc-100"
+                      className="shrink-0 rounded-md px-2 py-0.5 text-[10px] text-zinc-500 hover:bg-zinc-800 hover:text-zinc-100"
                     >
                       Retirer
                     </button>
