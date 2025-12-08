@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useState, useEffect } from "react";
 import Link from "next/link";
 import { useIdeaStore } from "@/app/admin/_providers/idea-store";
 import type { IdeaItem } from "@/lib/mock-data";
@@ -34,16 +34,20 @@ function saveReactions(map: ReactionMap) {
   if (typeof window === "undefined") return;
   try {
     window.localStorage.setItem(REACTIONS_STORAGE_KEY, JSON.stringify(map));
-  } catch {}
+  } catch {
+    // ignore
+  }
 }
 
 export default function HubPage() {
   const { ideas } = useIdeaStore();
   const [status, setStatus] = useState<FilterStatus>("ALL");
   const [query, setQuery] = useState("");
-  const [reactions, setReactions] = useState<ReactionMap>(() =>
-    loadInitialReactions(),
-  );
+  const [reactions, setReactions] = useState<ReactionMap>({});
+
+  useEffect(() => {
+    setReactions(loadInitialReactions());
+  }, []);
 
   const filteredIdeas = useMemo(() => {
     const base =
@@ -62,7 +66,7 @@ export default function HubPage() {
       if (!nextText) return prev;
       const updated: ReactionMap = {
         ...prev,
-        [ideaId]: [...current, nextText].slice(-6),
+        [ideaId]: [...current, nextText].slice(-20),
       };
       saveReactions(updated);
       return updated;
