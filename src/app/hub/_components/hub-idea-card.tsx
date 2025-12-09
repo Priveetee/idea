@@ -1,17 +1,11 @@
 "use client";
 
-import Link from "next/link";
-import { useState, useRef, useEffect, type KeyboardEvent } from "react";
+import { useState, type KeyboardEvent } from "react";
 import type { IdeaItem } from "@/lib/mock-data";
-import { getLinkMeta } from "@/lib/link-icons";
-import { RichPreviewText } from "@/app/idea/new/_components/rich-preview-text";
-import {
-  RiLinksLine,
-  RiArrowRightUpLine,
-  RiAddLine,
-  RiSendPlaneFill,
-} from "react-icons/ri";
-import { AnimatePresence, motion } from "motion/react";
+import { RiSendPlaneFill } from "react-icons/ri";
+import { HubIdeaComments } from "./hub-idea-comments";
+import { HubIdeaHeaderBody } from "./hub-idea-header-body";
+import { HubIdeaReactionsBar } from "./hub-idea-reactions-bar";
 
 type HubIdeaComment = {
   id: string;
@@ -26,51 +20,6 @@ type HubIdeaCardProps = {
   onToggleReaction: (_emoji: string) => void;
   onAddComment: (_text: string) => void;
 };
-
-const STATUS_CONFIG: Record<
-  string,
-  { label: string; bg: string; text: string; dot: string }
-> = {
-  INBOX: {
-    label: "Inbox",
-    bg: "bg-[#5227FF]/10",
-    text: "text-[#6b47ff]",
-    dot: "bg-[#6b47ff]",
-  },
-  DEV: {
-    label: "En cours",
-    bg: "bg-emerald-500/10",
-    text: "text-emerald-400",
-    dot: "bg-emerald-400",
-  },
-  ARCHIVE: {
-    label: "Archives",
-    bg: "bg-zinc-500/10",
-    text: "text-zinc-400",
-    dot: "bg-zinc-400",
-  },
-  DEFAULT: {
-    label: "Idée",
-    bg: "bg-zinc-500/10",
-    text: "text-zinc-400",
-    dot: "bg-zinc-400",
-  },
-};
-
-const EMOJI_PALETTE = [
-  "👍",
-  "❤️",
-  "🔥",
-  "🚀",
-  "😂",
-  "😮",
-  "😢",
-  "🙏",
-  "👀",
-  "🤔",
-  "💩",
-  "🤡",
-];
 
 type StackedReaction = { value: string; count: number };
 
@@ -91,40 +40,14 @@ export function HubIdeaCard({
   onToggleReaction,
   onAddComment,
 }: HubIdeaCardProps) {
-  const [isPickerOpen, setIsPickerOpen] = useState(false);
   const [commentValue, setCommentValue] = useState("");
-  const [expandedComments, setExpandedComments] = useState<
-    Record<string, boolean>
-  >({});
-  const pickerRef = useRef<HTMLDivElement>(null);
 
   const label = idea.label;
   const end = label.indexOf("]");
-  const tgi = end === -1 ? null : label.slice(0, end + 1);
   const title = end === -1 ? label : label.slice(end + 1).trim();
 
-  const status = STATUS_CONFIG[idea.status] ?? STATUS_CONFIG.DEFAULT;
-  const links = idea.managerLinks ?? [];
   const stacked = stackReactions(reactions);
-  const visibleComments = comments.length <= 2 ? comments : comments.slice(-2);
-
-  useEffect(() => {
-    function handleClickOutside(event: MouseEvent) {
-      if (
-        pickerRef.current &&
-        !pickerRef.current.contains(event.target as Node)
-      ) {
-        setIsPickerOpen(false);
-      }
-    }
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, []);
-
-  const onEmojiClick = (emoji: string) => {
-    onToggleReaction(emoji);
-    setIsPickerOpen(false);
-  };
+  const totalReactions = stacked.reduce((sum, r) => sum + r.count, 0);
 
   const handleCommentKeyDown = (e: KeyboardEvent<HTMLInputElement>) => {
     if (e.key === "Enter") {
@@ -142,182 +65,22 @@ export function HubIdeaCard({
     setCommentValue("");
   };
 
-  const toggleCommentExpand = (id: string) => {
-    setExpandedComments((prev) => ({
-      ...prev,
-      [id]: !prev[id],
-    }));
-  };
-
   return (
     <div className="group relative flex flex-col overflow-visible rounded-3xl border border-zinc-800/60 bg-[#0A0A0C] transition-all duration-300 hover:border-zinc-700 hover:shadow-2xl hover:shadow-black/50">
-      <div className="flex items-start justify-between p-5 pb-2">
-        <div className="flex flex-wrap items-center gap-2">
-          {tgi && (
-            <span className="font-mono text-[10px] font-bold text-zinc-600">
-              {tgi}
-            </span>
-          )}
-          <span
-            className={`inline-flex items-center gap-1.5 rounded-full px-2 py-0.5 text-[10px] font-semibold tracking-wide ${status.bg} ${status.text}`}
-          >
-            <span className={`h-1.5 w-1.5 rounded-full ${status.dot}`} />
-            {status.label}
-          </span>
-        </div>
-
-        {links.length > 0 && (
-          <div className="flex -space-x-1.5">
-            {links.slice(0, 3).map((l, i) => {
-              const Icon = getLinkMeta(l.url).icon;
-              return (
-                <div
-                  key={i}
-                  className="flex h-6 w-6 items-center justify-center rounded-full border border-[#0A0A0C] bg-zinc-800 text-zinc-400 shadow-sm"
-                >
-                  <Icon className="h-3 w-3" />
-                </div>
-              );
-            })}
-          </div>
-        )}
-      </div>
-
-      <div className="px-5">
-        <Link href={`/idea/${idea.id}`} className="block">
-          <h3 className="text-[17px] font-bold leading-tight text-zinc-100 transition duration-300 group-hover:text-[#5227FF]">
-            {title}
-          </h3>
-        </Link>
-
-        <div className="mt-3 line-clamp-4 text-[13px] leading-relaxed text-zinc-400">
-          {idea.managerContent ? (
-            <RichPreviewText text={idea.managerContent} />
-          ) : (
-            <span className="italic text-zinc-600">
-              Pas de description détaillée...
-            </span>
-          )}
-        </div>
-      </div>
-
-      {links.length > 0 && (
-        <div className="mt-4 flex flex-wrap gap-2 px-5">
-          {links.slice(0, 2).map((link) => {
-            const meta = getLinkMeta(link.url);
-            let host = link.url;
-            try {
-              host = new URL(link.url).hostname.replace("www.", "");
-            } catch {}
-
-            return (
-              <a
-                key={link.id}
-                href={link.url}
-                target="_blank"
-                rel="noreferrer"
-                className="group/link inline-flex max-w-full items-center gap-1.5 rounded-md border border-zinc-800 bg-zinc-900/40 px-2 py-1 text-[10px] text-zinc-400 transition hover:border-zinc-700 hover:bg-zinc-800 hover:text-zinc-200"
-              >
-                <RiLinksLine className="shrink-0 opacity-50 transition group-hover/link:opacity-100" />
-                <span className="truncate max-w-[120px]">
-                  {meta.label || host}
-                </span>
-                <RiArrowRightUpLine className="shrink-0 opacity-0 transition group-hover/link:opacity-50" />
-              </a>
-            );
-          })}
-        </div>
-      )}
+      <HubIdeaHeaderBody
+        idea={idea}
+        label={label}
+        title={title}
+        totalReactions={totalReactions}
+      />
 
       <div className="mt-auto px-5 pb-5 pt-5">
-        <div className="mb-3 flex flex-wrap items-center gap-2">
-          {stacked.map((r) => (
-            <button
-              key={r.value}
-              onClick={() => onToggleReaction(r.value)}
-              className="group flex h-7 min-w-[36px] items-center justify-center gap-1.5 rounded-full border border-zinc-800 bg-[#121214] px-2.5 text-[13px] font-medium text-zinc-300 transition hover:border-[#5227FF] hover:bg-[#5227FF]/10 hover:text-white"
-            >
-              <span className="leading-none">{r.value}</span>
-              <span className="text-[10px] font-bold text-zinc-600 group-hover:text-[#5227FF]">
-                {r.count}
-              </span>
-            </button>
-          ))}
+        <HubIdeaReactionsBar
+          stacked={stacked}
+          onToggleReaction={onToggleReaction}
+        />
 
-          <div className="relative" ref={pickerRef}>
-            <button
-              onClick={() => setIsPickerOpen(!isPickerOpen)}
-              className={`flex h-7 w-8 items-center justify-center rounded-full border transition ${
-                isPickerOpen
-                  ? "border-zinc-700 bg-zinc-800 text-zinc-200"
-                  : "border-transparent bg-zinc-900/50 text-zinc-500 hover:bg-zinc-800 hover:text-zinc-300"
-              }`}
-            >
-              <RiAddLine className="h-4 w-4" />
-            </button>
-
-            <AnimatePresence>
-              {isPickerOpen && (
-                <motion.div
-                  initial={{ opacity: 0, scale: 0.95, y: -10 }}
-                  animate={{ opacity: 1, scale: 1, y: 0 }}
-                  exit={{ opacity: 0, scale: 0.95, y: -10 }}
-                  transition={{ duration: 0.1 }}
-                  className="absolute left-0 top-full z-50 mt-2 w-[180px] rounded-xl border border-zinc-800 bg-[#121214] p-2 shadow-2xl"
-                >
-                  <div className="grid grid-cols-4 gap-1">
-                    {EMOJI_PALETTE.map((emoji) => (
-                      <button
-                        key={emoji}
-                        onClick={() => onEmojiClick(emoji)}
-                        className="flex aspect-square items-center justify-center rounded-lg text-lg transition hover:bg-zinc-800 hover:scale-110 active:scale-95"
-                      >
-                        {emoji}
-                      </button>
-                    ))}
-                  </div>
-                </motion.div>
-              )}
-            </AnimatePresence>
-          </div>
-        </div>
-
-        {visibleComments.length > 0 && (
-          <div className="mb-2 space-y-1.5 text-[12px] text-zinc-300">
-            {comments.length > 2 && (
-              <div className="text-[11px] text-zinc-500">
-                {comments.length - visibleComments.length} commentaire(s) plus
-                ancien(s)…
-              </div>
-            )}
-            {visibleComments.map((c) => {
-              const expanded = expandedComments[c.id] === true;
-              const isLong = c.text.length > 160;
-
-              return (
-                <div
-                  key={c.id}
-                  className="rounded-lg bg-zinc-900/60 px-3 py-1.5 text-[12px] text-zinc-200"
-                >
-                  <p
-                    className={`break-words ${expanded ? "" : "line-clamp-2"}`}
-                  >
-                    {c.text}
-                  </p>
-                  {isLong && (
-                    <button
-                      type="button"
-                      onClick={() => toggleCommentExpand(c.id)}
-                      className="mt-0.5 inline-block text-[11px] font-medium text-zinc-500 hover:text-zinc-300"
-                    >
-                      {expanded ? "Réduire" : "Lire la suite"}
-                    </button>
-                  )}
-                </div>
-              );
-            })}
-          </div>
-        )}
+        <HubIdeaComments comments={comments} />
 
         <div className="relative flex items-center">
           <input
