@@ -89,7 +89,18 @@ export default function HubPage() {
         </div>
       </div>
 
-      <div className="flex-1 overflow-y-auto px-6 py-8 md:px-10">
+      <div
+        className="flex-1 overflow-y-auto px-6 py-8 md:px-10
+              [&::-webkit-scrollbar]:w-[8px]
+              [&::-webkit-scrollbar-track]:bg-[#050509]
+              [&::-webkit-scrollbar-thumb]:bg-zinc-800
+              [&::-webkit-scrollbar-thumb]:rounded-full
+              [&::-webkit-scrollbar-thumb:hover]:bg-zinc-700"
+        style={{
+          scrollbarWidth: "thin",
+          scrollbarColor: "#3f3f46 #050509",
+        }}
+      >
         <div className="mx-auto max-w-[2000px]">
           {ideas.length === 0 ? (
             <div className="mt-20 flex flex-col items-center justify-center gap-6 text-center">
