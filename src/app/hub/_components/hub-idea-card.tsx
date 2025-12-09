@@ -13,10 +13,18 @@ import {
 } from "react-icons/ri";
 import { AnimatePresence, motion } from "motion/react";
 
+type HubIdeaComment = {
+  id: string;
+  text: string;
+  createdAt: number;
+};
+
 type HubIdeaCardProps = {
   idea: IdeaItem;
   reactions: string[];
+  comments: HubIdeaComment[];
   onToggleReaction: (_emoji: string) => void;
+  onAddComment: (_text: string) => void;
 };
 
 const STATUS_CONFIG: Record<
@@ -79,9 +87,12 @@ function stackReactions(raw: string[]): StackedReaction[] {
 export function HubIdeaCard({
   idea,
   reactions,
+  comments,
   onToggleReaction,
+  onAddComment,
 }: HubIdeaCardProps) {
   const [isPickerOpen, setIsPickerOpen] = useState(false);
+  const [commentValue, setCommentValue] = useState("");
   const pickerRef = useRef<HTMLDivElement>(null);
 
   const label = idea.label;
@@ -92,6 +103,7 @@ export function HubIdeaCard({
   const status = STATUS_CONFIG[idea.status] ?? STATUS_CONFIG.DEFAULT;
   const links = idea.managerLinks ?? [];
   const stacked = stackReactions(reactions);
+  const visibleComments = comments.length <= 2 ? comments : comments.slice(-2);
 
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
@@ -111,11 +123,20 @@ export function HubIdeaCard({
     setIsPickerOpen(false);
   };
 
-  const handleKeyDown = (e: KeyboardEvent<HTMLInputElement>) => {
+  const handleCommentKeyDown = (e: KeyboardEvent<HTMLInputElement>) => {
     if (e.key === "Enter") {
-      const target = e.target as HTMLInputElement;
-      target.value = "";
+      const value = commentValue.trim();
+      if (!value) return;
+      onAddComment(value);
+      setCommentValue("");
     }
+  };
+
+  const handleSendClick = () => {
+    const value = commentValue.trim();
+    if (!value) return;
+    onAddComment(value);
+    setCommentValue("");
   };
 
   return (
@@ -142,7 +163,7 @@ export function HubIdeaCard({
               return (
                 <div
                   key={i}
-                  className="flex h-6 w-6 items-center justify-center rounded-full border border-[#0A0A0C] bg-zinc-800 text-zinc-400 shadow-sm"
+                  className="flex h-6 w-6 items-center justifycenter rounded-full border border-[#0A0A0C] bg-zinc-800 text-zinc-400 shadow-sm"
                 >
                   <Icon className="h-3 w-3" />
                 </div>
@@ -177,9 +198,7 @@ export function HubIdeaCard({
             let host = link.url;
             try {
               host = new URL(link.url).hostname.replace("www.", "");
-            } catch {
-              /* empty */
-            }
+            } catch {}
 
             return (
               <a
@@ -253,14 +272,38 @@ export function HubIdeaCard({
           </div>
         </div>
 
+        {visibleComments.length > 0 && (
+          <div className="mb-2 space-y-1.5 text-[12px] text-zinc-300">
+            {comments.length > 2 && (
+              <div className="text-[11px] text-zinc-500">
+                {comments.length - visibleComments.length} commentaire(s) plus
+                ancien(s)…
+              </div>
+            )}
+            {visibleComments.map((c) => (
+              <div
+                key={c.id}
+                className="rounded-lg bg-zinc-900/60 px-3 py-1.5 text-[12px] text-zinc-200"
+              >
+                {c.text}
+              </div>
+            ))}
+          </div>
+        )}
+
         <div className="relative flex items-center">
           <input
             type="text"
             placeholder="Ajouter un commentaire..."
             className="h-9 w-full rounded-xl border border-zinc-800 bg-zinc-900/30 pl-3 pr-9 text-[12px] text-zinc-200 placeholder-zinc-600 outline-none transition focus:border-zinc-700 focus:bg-zinc-900"
-            onKeyDown={handleKeyDown}
+            value={commentValue}
+            onChange={(e) => setCommentValue(e.target.value)}
+            onKeyDown={handleCommentKeyDown}
           />
-          <button className="absolute right-2 flex h-6 w-6 items-center justify-center rounded-lg text-zinc-600 transition hover:bg-[#5227FF] hover:text-white">
+          <button
+            onClick={handleSendClick}
+            className="absolute right-2 flex h-6 w-6 items-center justify-center rounded-lg text-zinc-600 transition hover:bg-[#5227FF] hover:text-white"
+          >
             <RiSendPlaneFill className="h-3.5 w-3.5" />
           </button>
         </div>

@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState, useEffect } from "react";
+import { useMemo, useState } from "react";
 import Link from "next/link";
 import { useIdeaStore } from "@/app/admin/_providers/idea-store";
 import type { IdeaItem } from "@/lib/mock-data";
@@ -14,29 +14,15 @@ import {
 type FilterStatus = "ALL" | "INBOX" | "DEV" | "ARCHIVE";
 
 type ReactionMap = Record<string, string[]>;
+type Comment = { id: string; text: string; createdAt: number };
+type CommentMap = Record<string, Comment[]>;
 
-const REACTIONS_STORAGE_KEY = "idea-hub-reactions-v3";
-
-function loadInitialReactions(): ReactionMap {
-  if (typeof window === "undefined") return {};
-  try {
-    const raw = window.localStorage.getItem(REACTIONS_STORAGE_KEY);
-    if (!raw) return {};
-    const parsed = JSON.parse(raw) as ReactionMap;
-    if (!parsed || typeof parsed !== "object") return {};
-    return parsed;
-  } catch {
-    return {};
-  }
-}
-
-function saveReactions(map: ReactionMap) {
-  if (typeof window === "undefined") return;
-  try {
-    window.localStorage.setItem(REACTIONS_STORAGE_KEY, JSON.stringify(map));
-  } catch {
-    // ignore
-  }
+function createComment(text: string): Comment {
+  return {
+    id: `${Date.now()}-${Math.random().toString(16).slice(2)}`,
+    text,
+    createdAt: Date.now(),
+  };
 }
 
 export default function HubPage() {
@@ -44,13 +30,7 @@ export default function HubPage() {
   const [status, setStatus] = useState<FilterStatus>("ALL");
   const [query, setQuery] = useState("");
   const [reactions, setReactions] = useState<ReactionMap>({});
-
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      setReactions(loadInitialReactions());
-    }, 0);
-    return () => clearTimeout(timer);
-  }, []);
+  const [comments, setComments] = useState<CommentMap>({});
 
   const filteredIdeas = useMemo(() => {
     const base =
@@ -67,19 +47,28 @@ export default function HubPage() {
       const current = prev[ideaId] ?? [];
       const exists = current.includes(emoji);
 
-      let nextReactions;
-      if (exists) {
-        nextReactions = current.filter((e) => e !== emoji);
-      } else {
-        nextReactions = [...current, emoji];
-      }
+      const nextReactions = exists
+        ? current.filter((e) => e !== emoji)
+        : [...current, emoji];
 
-      const updated = {
+      return {
         ...prev,
         [ideaId]: nextReactions,
       };
-      saveReactions(updated);
-      return updated;
+    });
+  };
+
+  const handleAddComment = (ideaId: string, text: string) => {
+    const trimmed = text.trim();
+    if (!trimmed) return;
+
+    setComments((prev) => {
+      const current = prev[ideaId] ?? [];
+      const next = [...current, createComment(trimmed)];
+      return {
+        ...prev,
+        [ideaId]: next.slice(-5),
+      };
     });
   };
 
@@ -123,7 +112,7 @@ export default function HubPage() {
       <div className="flex-1 overflow-y-auto px-6 py-8 md:px-10">
         <div className="mx-auto max-w-[2000px]">
           {filteredIdeas.length === 0 ? (
-            <div className="mt-20 flex flex-col items-center justify-center gap-6 text-center">
+            <div className="mt-20 flex flex-col items-center justify-center gap-6 textcenter">
               <div className="flex h-20 w-20 items-center justify-center rounded-3xl bg-zinc-900/50">
                 <span className="text-3xl">🌪️</span>
               </div>
@@ -141,13 +130,16 @@ export default function HubPage() {
                 const idea = filteredIdeas.find(
                   (i) => i.id === item.id,
                 ) as IdeaItem;
+                const ideaComments = comments[idea.id] ?? [];
                 return (
                   <HubIdeaCard
                     idea={idea}
                     reactions={reactions[idea.id] ?? []}
+                    comments={ideaComments}
                     onToggleReaction={(emoji) =>
                       handleToggleReaction(idea.id, emoji)
                     }
+                    onAddComment={(text) => handleAddComment(idea.id, text)}
                   />
                 );
               }}
