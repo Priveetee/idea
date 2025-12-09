@@ -93,6 +93,9 @@ export function HubIdeaCard({
 }: HubIdeaCardProps) {
   const [isPickerOpen, setIsPickerOpen] = useState(false);
   const [commentValue, setCommentValue] = useState("");
+  const [expandedComments, setExpandedComments] = useState<
+    Record<string, boolean>
+  >({});
   const pickerRef = useRef<HTMLDivElement>(null);
 
   const label = idea.label;
@@ -139,6 +142,13 @@ export function HubIdeaCard({
     setCommentValue("");
   };
 
+  const toggleCommentExpand = (id: string) => {
+    setExpandedComments((prev) => ({
+      ...prev,
+      [id]: !prev[id],
+    }));
+  };
+
   return (
     <div className="group relative flex flex-col overflow-visible rounded-3xl border border-zinc-800/60 bg-[#0A0A0C] transition-all duration-300 hover:border-zinc-700 hover:shadow-2xl hover:shadow-black/50">
       <div className="flex items-start justify-between p-5 pb-2">
@@ -163,7 +173,7 @@ export function HubIdeaCard({
               return (
                 <div
                   key={i}
-                  className="flex h-6 w-6 items-center justifycenter rounded-full border border-[#0A0A0C] bg-zinc-800 text-zinc-400 shadow-sm"
+                  className="flex h-6 w-6 items-center justify-center rounded-full border border-[#0A0A0C] bg-zinc-800 text-zinc-400 shadow-sm"
                 >
                   <Icon className="h-3 w-3" />
                 </div>
@@ -281,19 +291,27 @@ export function HubIdeaCard({
               </div>
             )}
             {visibleComments.map((c) => {
+              const expanded = expandedComments[c.id] === true;
               const isLong = c.text.length > 160;
-              const displayText = isLong ? `${c.text.slice(0, 160)}…` : c.text;
 
               return (
                 <div
                   key={c.id}
-                  className="overflow-hidden rounded-lg bg-zinc-900/60 px-3 py-1.5 text-[12px] text-zinc-200"
+                  className="rounded-lg bg-zinc-900/60 px-3 py-1.5 text-[12px] text-zinc-200"
                 >
-                  <p className="line-clamp-2 break-words">{displayText}</p>
+                  <p
+                    className={`break-words ${expanded ? "" : "line-clamp-2"}`}
+                  >
+                    {c.text}
+                  </p>
                   {isLong && (
-                    <span className="mt-0.5 inline-block cursor-pointer text-[11px] font-medium text-zinc-500 hover:text-zinc-300">
-                      Lire la suite
-                    </span>
+                    <button
+                      type="button"
+                      onClick={() => toggleCommentExpand(c.id)}
+                      className="mt-0.5 inline-block text-[11px] font-medium text-zinc-500 hover:text-zinc-300"
+                    >
+                      {expanded ? "Réduire" : "Lire la suite"}
+                    </button>
                   )}
                 </div>
               );
