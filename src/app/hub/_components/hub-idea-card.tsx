@@ -280,14 +280,24 @@ export function HubIdeaCard({
                 ancien(s)…
               </div>
             )}
-            {visibleComments.map((c) => (
-              <div
-                key={c.id}
-                className="rounded-lg bg-zinc-900/60 px-3 py-1.5 text-[12px] text-zinc-200"
-              >
-                {c.text}
-              </div>
-            ))}
+            {visibleComments.map((c) => {
+              const isLong = c.text.length > 160;
+              const displayText = isLong ? `${c.text.slice(0, 160)}…` : c.text;
+
+              return (
+                <div
+                  key={c.id}
+                  className="overflow-hidden rounded-lg bg-zinc-900/60 px-3 py-1.5 text-[12px] text-zinc-200"
+                >
+                  <p className="line-clamp-2 break-words">{displayText}</p>
+                  {isLong && (
+                    <span className="mt-0.5 inline-block cursor-pointer text-[11px] font-medium text-zinc-500 hover:text-zinc-300">
+                      Lire la suite
+                    </span>
+                  )}
+                </div>
+              );
+            })}
           </div>
         )}
 
