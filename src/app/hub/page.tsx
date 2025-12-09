@@ -4,14 +4,11 @@ import { useMemo, useState } from "react";
 import Link from "next/link";
 import { useIdeaStore } from "@/app/admin/_providers/idea-store";
 import type { IdeaItem } from "@/lib/mock-data";
-import { HubFilters } from "./_components/hub-filters";
 import { HubIdeaCard } from "./_components/hub-idea-card";
 import {
   HubAnimatedList,
   type HubAnimatedListItem,
 } from "./_components/hub-animated-list";
-
-type FilterStatus = "ALL" | "INBOX" | "DEV" | "ARCHIVE";
 
 type ReactionMap = Record<string, string[]>;
 type Comment = { id: string; text: string; createdAt: number };
@@ -27,20 +24,17 @@ function createComment(text: string): Comment {
 
 export default function HubPage() {
   const { ideas } = useIdeaStore();
-  const [status, setStatus] = useState<FilterStatus>("ALL");
-  const [query, setQuery] = useState("");
   const [reactions, setReactions] = useState<ReactionMap>({});
   const [comments, setComments] = useState<CommentMap>({});
 
-  const filteredIdeas = useMemo(() => {
-    const base =
-      status === "ALL" ? ideas : ideas.filter((idea) => idea.status === status);
-
-    if (!query.trim()) return base;
-
-    const q = query.toLowerCase();
-    return base.filter((idea) => idea.label.toLowerCase().includes(q));
-  }, [ideas, status, query]);
+  const listItems: HubAnimatedListItem[] = useMemo(
+    () =>
+      ideas.map((idea) => ({
+        id: idea.id,
+        label: idea.label,
+      })),
+    [ideas],
+  );
 
   const handleToggleReaction = (ideaId: string, emoji: string) => {
     setReactions((prev) => {
@@ -72,11 +66,6 @@ export default function HubPage() {
     });
   };
 
-  const listItems: HubAnimatedListItem[] = filteredIdeas.map((idea) => ({
-    id: idea.id,
-    label: idea.label,
-  }));
-
   return (
     <div className="flex h-screen flex-col overflow-hidden bg-[#050509] text-white">
       <div className="shrink-0 border-b border-zinc-900 bg-[#050509]/80 px-6 py-6 backdrop-blur-md md:px-10">
@@ -98,26 +87,17 @@ export default function HubPage() {
             </Link>
           </div>
         </div>
-
-        <div className="mx-auto mt-6 max-w-[2000px]">
-          <HubFilters
-            status={status}
-            onStatusChange={setStatus}
-            query={query}
-            onQueryChange={setQuery}
-          />
-        </div>
       </div>
 
       <div className="flex-1 overflow-y-auto px-6 py-8 md:px-10">
         <div className="mx-auto max-w-[2000px]">
-          {filteredIdeas.length === 0 ? (
-            <div className="mt-20 flex flex-col items-center justify-center gap-6 textcenter">
+          {ideas.length === 0 ? (
+            <div className="mt-20 flex flex-col items-center justify-center gap-6 text-center">
               <div className="flex h-20 w-20 items-center justify-center rounded-3xl bg-zinc-900/50">
                 <span className="text-3xl">🌪️</span>
               </div>
               <div className="max-w-md text-[15px] text-zinc-500">
-                Aucune idée ne correspond à votre recherche.
+                Aucune idée n&apos;est encore disponible.
               </div>
             </div>
           ) : (
@@ -127,9 +107,7 @@ export default function HubPage() {
               enableDrag={false}
               showGradients={false}
               renderItem={(item) => {
-                const idea = filteredIdeas.find(
-                  (i) => i.id === item.id,
-                ) as IdeaItem;
+                const idea = ideas.find((i) => i.id === item.id) as IdeaItem;
                 const ideaComments = comments[idea.id] ?? [];
                 return (
                   <HubIdeaCard

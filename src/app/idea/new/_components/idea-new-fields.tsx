@@ -72,7 +72,7 @@ export function IdeaNewFields({
     <>
       <div className="mb-5">
         <div className="text-xs uppercase tracking-[0.16em] text-zinc-500">
-          Nouvelle idée TGI
+          Nouvelle idée
         </div>
         <div className="mt-1 text-[13px] text-zinc-400">
           Décrivez votre idée en quelques minutes, nous ferons le reste dans
