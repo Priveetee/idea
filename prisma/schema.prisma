@@ -1,15 +1,8 @@
 generator client {
   provider = "prisma-client"
-  output   = "../src/generated/prisma"
+  output   = "../generated/prisma"
 }
 
 datasource db {
   provider = "sqlite"
-}
-
-model Idea {
-  id        String   @id @default(cuid())
-  content   String
-  status    String   @default("INBOX")
-  createdAt DateTime @default(now())
 }

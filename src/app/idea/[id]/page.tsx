@@ -60,14 +60,14 @@ export default function PublicIdeaPage() {
   const tgiLabel = end === -1 ? null : label.slice(0, end + 1);
   const titleLabel = end === -1 ? label : label.slice(end + 1).trim();
 
-  const ideaReactions = reactions[idea.id] ?? [];
   const ideaComments = comments[idea.id] ?? [];
 
-  const stacked = useMemo(() => stackReactions(ideaReactions), [ideaReactions]);
-  const totalReactions = useMemo(
-    () => stacked.reduce((sum, r) => sum + r.count, 0),
-    [stacked],
-  );
+  const { stacked, totalReactions } = useMemo(() => {
+    const list = reactions[idea.id] ?? [];
+    const s = stackReactions(list);
+    const total = s.reduce((sum, r) => sum + r.count, 0);
+    return { stacked: s, totalReactions: total };
+  }, [reactions, idea.id]);
 
   const handleToggleReaction = (emoji: string) => {
     setReactions((prev) => {
