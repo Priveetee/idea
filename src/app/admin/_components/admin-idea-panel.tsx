@@ -143,12 +143,7 @@ export function AdminIdeaPanel({
                     Statut espace: {activeStatus}
                   </div>
                 </div>
-                <div className="flex flex-col items-end text-[11px] text-zinc-500">
-                  <span>Origine: Lien unique TGI</span>
-                  <span className="mt-0.5 opacity-70">
-                    Flux: mockdata admin
-                  </span>
-                </div>
+                <div className="flex flex-col items-end text-[11px] text-zinc-500"></div>
               </div>
 
               <h1 className="text-xl font-semibold leading-snug text-zinc-50">

@@ -1,7 +1,7 @@
 "use client";
 
 import { createContext, useContext, useState, ReactNode } from "react";
-import { INITIAL_IDEAS, type IdeaItem } from "@/lib/mock-data";
+import type { IdeaItem } from "@/lib/mock-data";
 
 type IdeaStoreContextValue = {
   ideas: IdeaItem[];
@@ -11,7 +11,7 @@ type IdeaStoreContextValue = {
 const IdeaStoreContext = createContext<IdeaStoreContextValue | null>(null);
 
 export function IdeaStoreProvider({ children }: { children: ReactNode }) {
-  const [ideas, _setIdeas] = useState<IdeaItem[]>(INITIAL_IDEAS);
+  const [ideas, _setIdeas] = useState<IdeaItem[]>([]);
 
   const setIdeas = (_updater: (_prev: IdeaItem[]) => IdeaItem[]) => {
     _setIdeas((prev) => _updater(prev));

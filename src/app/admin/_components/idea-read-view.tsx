@@ -92,10 +92,7 @@ export function IdeaReadView({
             )}
           </div>
         </div>
-        <div className="flex flex-col items-end text-[11px] text-zinc-500">
-          <span>Origine: Lien unique TGI</span>
-          <span className="mt-0.5 opacity-70">Flux: mockdata admin</span>
-        </div>
+        <div className="flex flex-col items-end text-[11px] text-zinc-500"></div>
       </header>
 
       <div className="space-y-2">
