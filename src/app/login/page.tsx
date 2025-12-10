@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { z } from "zod";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
@@ -13,9 +13,16 @@ const schema = z.object({
 
 export default function LoginPage() {
   const router = useRouter();
+  const { data: session } = authClient.useSession();
   const [values, setValues] = useState({ email: "", password: "" });
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    if (session) {
+      router.replace("/admin");
+    }
+  }, [session, router]);
 
   const handleChange =
     (field: "email" | "password") =>
@@ -59,6 +66,10 @@ export default function LoginPage() {
       setLoading(false);
     }
   };
+
+  if (session) {
+    return null;
+  }
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-black text-white">

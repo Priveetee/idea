@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { z } from "zod";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
@@ -14,9 +14,16 @@ const schema = z.object({
 
 export default function RegisterPage() {
   const router = useRouter();
+  const { data: session } = authClient.useSession();
   const [values, setValues] = useState({ name: "", email: "", password: "" });
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    if (session) {
+      router.replace("/admin");
+    }
+  }, [session, router]);
 
   const handleChange =
     (field: "name" | "email" | "password") =>
@@ -62,6 +69,10 @@ export default function RegisterPage() {
       setLoading(false);
     }
   };
+
+  if (session) {
+    return null;
+  }
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-black text-white">
@@ -144,7 +155,7 @@ export default function RegisterPage() {
                   strokeLinecap="round"
                   strokeLinejoin="round"
                   strokeWidth={2}
-                  d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"
+                  d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"
                 />
               </svg>
             </div>
