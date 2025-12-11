@@ -1,10 +1,10 @@
 "use client";
 
-import type { RefObject, KeyboardEvent } from "react";
+import type { KeyboardEvent, RefObject } from "react";
 import type { IdeaLink } from "@/lib/mock-data";
-import { IdeaNewFields } from "./idea-new-fields";
 import { RichPreviewText } from "./rich-preview-text";
 import { getLinkMeta } from "@/lib/link-icons";
+import { IdeaNewFields } from "./idea-new-fields";
 
 type IdeaNewFormViewProps = {
   tgi: string;
@@ -35,44 +35,42 @@ type IdeaNewFormViewProps = {
   onDescriptionKeyDown: (_e: KeyboardEvent<HTMLTextAreaElement>) => void;
   titleRef: RefObject<HTMLTextAreaElement | null>;
   previewTitle: string;
-  previewMetaParts: string[];
-  hasAnyMeta: boolean;
+  previewMetaParts?: string[];
+  hasAnyMeta?: boolean;
 };
 
-export function IdeaNewFormView(props: IdeaNewFormViewProps) {
-  const {
-    tgi,
-    title,
-    description,
-    impact,
-    complexity,
-    tag,
-    links,
-    linkDraft,
-    setTgi,
-    setTitle,
-    setDescription,
-    setImpact,
-    setComplexity,
-    setTag,
-    setLinkDraft,
-    addLink,
-    removeLink,
-    fieldError,
-    error,
-    submitting,
-    isFormRoughlyValid,
-    titleLength,
-    titleTooLong,
-    onSubmit,
-    onTitleKeyDown,
-    onDescriptionKeyDown,
-    titleRef,
-    previewTitle,
-    previewMetaParts,
-    hasAnyMeta,
-  } = props;
-
+export function IdeaNewFormView({
+  tgi,
+  title,
+  description,
+  impact,
+  complexity,
+  tag,
+  links,
+  linkDraft,
+  setTgi,
+  setTitle,
+  setDescription,
+  setImpact,
+  setComplexity,
+  setTag,
+  setLinkDraft,
+  addLink,
+  removeLink,
+  fieldError,
+  error,
+  submitting,
+  isFormRoughlyValid,
+  titleLength,
+  titleTooLong,
+  onSubmit,
+  onTitleKeyDown,
+  onDescriptionKeyDown,
+  titleRef,
+  previewTitle,
+  previewMetaParts = [],
+  hasAnyMeta = false,
+}: IdeaNewFormViewProps) {
   const hasMeta = previewMetaParts.length > 0;
 
   return (

@@ -24,12 +24,15 @@ import { SiNewyorktimes, SiGitea, SiTypescript } from "react-icons/si";
 import { DiGo, DiApple, DiLinux } from "react-icons/di";
 import { CiInstagram } from "react-icons/ci";
 import { FaJava } from "react-icons/fa";
+import { GoLinkExternal } from "react-icons/go";
 
 type IconEntry = {
   hostIncludes: string[];
   icon: IconType;
   label: string;
 };
+
+export const EXTERNAL_ICON = GoLinkExternal;
 
 const ICONS: IconEntry[] = [
   {
@@ -52,7 +55,6 @@ const ICONS: IconEntry[] = [
     icon: SiGitea,
     label: "Gitea",
   },
-
   {
     hostIncludes: ["youtube.com", "youtu.be"],
     icon: FaYoutube,
@@ -63,13 +65,11 @@ const ICONS: IconEntry[] = [
     icon: FaTiktok,
     label: "TikTok",
   },
-
   {
     hostIncludes: ["figma.com"],
     icon: FaFigma,
     label: "Figma",
   },
-
   {
     hostIncludes: ["x.com", "twitter.com"],
     icon: FaXTwitter,
@@ -85,7 +85,6 @@ const ICONS: IconEntry[] = [
     icon: FaFacebook,
     label: "Facebook",
   },
-
   {
     hostIncludes: ["discord.gg", "discord.com"],
     icon: FaDiscord,
@@ -96,7 +95,6 @@ const ICONS: IconEntry[] = [
     icon: FaSlack,
     label: "Slack",
   },
-
   {
     hostIncludes: ["drive.google.com"],
     icon: FaGoogleDrive,
@@ -107,7 +105,6 @@ const ICONS: IconEntry[] = [
     icon: FaDropbox,
     label: "Dropbox",
   },
-
   {
     hostIncludes: ["trello.com"],
     icon: FaTrello,
@@ -118,7 +115,6 @@ const ICONS: IconEntry[] = [
     icon: FaJira,
     label: "Jira",
   },
-
   {
     hostIncludes: ["medium.com"],
     icon: FaMediumM,
@@ -134,13 +130,11 @@ const ICONS: IconEntry[] = [
     icon: IoNewspaperSharp,
     label: "Article de presse",
   },
-
   {
     hostIncludes: ["mozilla.org", "firefox.com"],
     icon: FaFirefoxBrowser,
     label: "Firefox",
   },
-
   {
     hostIncludes: ["golang.org", "go.dev"],
     icon: DiGo,
@@ -161,7 +155,6 @@ const ICONS: IconEntry[] = [
     icon: FaJava,
     label: "Java",
   },
-
   {
     hostIncludes: ["apple.com"],
     icon: DiApple,
