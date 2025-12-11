@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
+import { useEffect, useRef, useState } from "react";
 
 type StackedReaction = { value: string; count: number };
 
@@ -9,12 +9,12 @@ const EMOJI_PALETTE = [
   "❤️",
   "🔥",
   "🚀",
-  "🤔",
   "😂",
   "😮",
   "😢",
   "🙏",
   "👀",
+  "🤔",
 ];
 
 type PublicReactionsBarProps = {

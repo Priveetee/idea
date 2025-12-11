@@ -3,6 +3,35 @@ import { router, publicProcedure } from "../trpc";
 import { prisma } from "@/lib/prisma";
 
 export const ideaRouter = router({
+  listPublic: publicProcedure.query(async () => {
+    const ideas = await prisma.idea.findMany({
+      where: { isPublic: true },
+      orderBy: { createdAt: "desc" },
+      include: {
+        links: true,
+        bullets: true,
+      },
+    });
+    return ideas;
+  }),
+
+  byIdPublic: publicProcedure
+    .input(
+      z.object({
+        id: z.string(),
+      }),
+    )
+    .query(async ({ input }) => {
+      const idea = await prisma.idea.findFirst({
+        where: { id: input.id, isPublic: true },
+        include: {
+          links: true,
+          bullets: true,
+        },
+      });
+      return idea;
+    }),
+
   list: publicProcedure.query(async () => {
     const ideas = await prisma.idea.findMany({
       orderBy: { createdAt: "desc" },
@@ -64,6 +93,7 @@ export const ideaRouter = router({
           managerSummary: input.managerSummary ?? "",
           managerContent: input.managerContent ?? "",
           managerNote: input.managerNote ?? "",
+          isPublic: false,
           links: input.links
             ? {
                 create: input.links.map((l) => ({
@@ -165,5 +195,20 @@ export const ideaRouter = router({
         where: { id: input.id },
       });
       return { success: true };
+    }),
+
+  setVisibility: publicProcedure
+    .input(
+      z.object({
+        id: z.string(),
+        isPublic: z.boolean(),
+      }),
+    )
+    .mutation(async ({ input }) => {
+      const idea = await prisma.idea.update({
+        where: { id: input.id },
+        data: { isPublic: input.isPublic },
+      });
+      return idea;
     }),
 });

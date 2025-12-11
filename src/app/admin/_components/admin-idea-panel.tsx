@@ -3,33 +3,39 @@
 import { useMemo, useState } from "react";
 import { FaNoteSticky } from "react-icons/fa6";
 import ClickSpark from "@/components/ui/click-spark";
-import type { IdeaStatus, IdeaLink, IdeaBullet } from "@/lib/mock-data";
+import type {
+  AdminIdeaStatus,
+  AdminIdeaLink,
+  AdminIdeaBullet,
+} from "../use-admin-ideas";
 import { IdeaBulletsEditor } from "./idea-bullets-editor";
 import { IdeaLinksEditor } from "./idea-links-editor";
 import { IdeaReadView } from "./idea-read-view";
 
 type AdminIdeaPanelProps = {
   selected: {
-    status: IdeaStatus | string;
+    status: AdminIdeaStatus;
     index: number;
     label: string;
     id: string;
+    isPublic?: boolean;
   } | null;
-  activeStatus: IdeaStatus;
+  activeStatus: AdminIdeaStatus;
   managerSummary: string;
   managerContent: string;
-  managerLinks: IdeaLink[];
-  managerBullets: IdeaBullet[];
+  managerLinks: AdminIdeaLink[];
+  managerBullets: AdminIdeaBullet[];
   managerNote: string;
   updateIdeaDetailsAction: (_: {
     id: string;
     managerSummary: string;
     managerContent: string;
-    managerLinks: IdeaLink[];
-    managerBullets: IdeaBullet[];
+    managerLinks: AdminIdeaLink[];
+    managerBullets: AdminIdeaBullet[];
     managerNote: string;
   }) => void;
   clearSelectionAction: () => void;
+  setVisibilityAction: (_: { id: string; isPublic: boolean }) => void;
 };
 
 export function AdminIdeaPanel({
@@ -42,6 +48,7 @@ export function AdminIdeaPanel({
   managerNote,
   updateIdeaDetailsAction,
   clearSelectionAction,
+  setVisibilityAction,
 }: AdminIdeaPanelProps) {
   const [mode, setMode] = useState<"view" | "edit">("view");
 
@@ -83,8 +90,8 @@ export function AdminIdeaPanel({
   const pushUpdate = (partial: {
     managerSummary?: string;
     managerContent?: string;
-    managerLinks?: IdeaLink[];
-    managerBullets?: IdeaBullet[];
+    managerLinks?: AdminIdeaLink[];
+    managerBullets?: AdminIdeaBullet[];
     managerNote?: string;
   }) => {
     updateIdeaDetailsAction({
@@ -111,21 +118,50 @@ export function AdminIdeaPanel({
     setMode("view");
   };
 
+  const isPublic = selected.isPublic ?? false;
+
   return (
     <div className="flex h-full w-full">
       <div className="flex w-full max-w-[960px] flex-col rounded-3xl border border-zinc-900 bg-[#060010] px-10 py-6 shadow-[0_0_40px_rgba(0,0,0,0.5)] max-h-[calc(100vh-220px)]">
         <div className="panel-scroll flex-1 overflow-y-auto pr-2">
           {mode === "view" ? (
-            <IdeaReadView
-              titleLabel={currentTitle}
-              tgiLabel={currentTgi}
-              activeStatus={activeStatus}
-              managerSummary={managerSummary}
-              managerContent={managerContent}
-              managerBullets={managerBullets}
-              managerLinks={managerLinks}
-              managerNote={managerNote}
-            />
+            <>
+              <div className="mb-3 flex items-center justify-between text-[11px] text-zinc-500">
+                <div className="inline-flex items-center gap-2 rounded-full bg-zinc-900 px-2.5 py-1">
+                  <span
+                    className={`h-1.5 w-1.5 rounded-full ${
+                      isPublic ? "bg-emerald-400" : "bg-zinc-500"
+                    }`}
+                  />
+                  <span>
+                    {isPublic ? "Visible publiquement" : "Privée (non publiée)"}
+                  </span>
+                </div>
+                <button
+                  type="button"
+                  onClick={() =>
+                    setVisibilityAction({
+                      id: selected.id,
+                      isPublic: !isPublic,
+                    })
+                  }
+                  className="text-[11px] text-zinc-400 underline-offset-2 hover:text-zinc-200 hover:underline"
+                >
+                  {isPublic ? "Rendre privée" : "Rendre publique"}
+                </button>
+              </div>
+
+              <IdeaReadView
+                titleLabel={currentTitle}
+                tgiLabel={currentTgi}
+                activeStatus={activeStatus}
+                managerSummary={managerSummary}
+                managerContent={managerContent}
+                managerBullets={managerBullets}
+                managerLinks={managerLinks}
+                managerNote={managerNote}
+              />
+            </>
           ) : (
             <div className="space-y-6">
               <div className="flex items-start justify-between gap-3">

@@ -3,7 +3,6 @@
 import { useMemo, useState } from "react";
 import Link from "next/link";
 import { trpc } from "@/lib/trpc";
-import type { IdeaItem } from "@/lib/mock-data";
 import { HubIdeaCard } from "./_components/hub-idea-card";
 import {
   HubAnimatedList,
@@ -23,28 +22,29 @@ function createComment(text: string): Comment {
 }
 
 export default function HubPage() {
-  const { data, isLoading } = trpc.idea.list.useQuery();
+  const { data, isLoading } = trpc.idea.listPublic.useQuery();
+
   const [reactions, setReactions] = useState<ReactionMap>({});
   const [comments, setComments] = useState<CommentMap>({});
 
-  const ideas: IdeaItem[] = useMemo(
+  const ideas = useMemo(
     () =>
       (data ?? []).map((idea) => ({
         id: idea.id,
         label: idea.label,
         status: idea.status,
-        managerSummary: idea.managerSummary,
-        managerContent: idea.managerContent,
-        managerLinks: idea.links?.map((l) => ({
+        managerSummary: idea.managerSummary ?? "",
+        managerContent: idea.managerContent ?? "",
+        managerLinks: idea.links.map((l) => ({
           id: l.id,
           label: l.label,
           url: l.url,
         })),
-        managerBullets: idea.bullets?.map((b) => ({
+        managerBullets: idea.bullets.map((b) => ({
           id: b.id,
           text: b.text,
         })),
-        managerNote: idea.managerNote,
+        managerNote: idea.managerNote ?? "",
       })),
     [data],
   );
@@ -103,7 +103,7 @@ export default function HubPage() {
           <div className="flex items-center gap-4">
             <Link
               href="/idea/new"
-              className="group relative flex h-9 items-center gap-2 overflow-hidden rounded-full bg-white px-5 text-[13px] font-bold text-black transition hover:bg-zinc-200"
+              className="group relative flex h-9 items-center gap-2 overflow-hidden rounded-full bgWHITE px-5 text-[13px] font-bold text-black transition hover:bg-zinc-200"
             >
               <span>Proposer une idée</span>
             </Link>
@@ -139,7 +139,7 @@ export default function HubPage() {
               enableDrag={false}
               showGradients={false}
               renderItem={(item) => {
-                const idea = ideas.find((i) => i.id === item.id) as IdeaItem;
+                const idea = ideas.find((i) => i.id === item.id)!;
                 const ideaComments = comments[idea.id] ?? [];
                 return (
                   <HubIdeaCard

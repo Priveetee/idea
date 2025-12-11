@@ -2,8 +2,7 @@
 
 import { useState, type KeyboardEvent } from "react";
 import Link from "next/link";
-import { notFound, useParams, useRouter } from "next/navigation";
-import type { IdeaStatus } from "@/lib/mock-data";
+import { notFound, useParams } from "next/navigation";
 import { trpc } from "@/lib/trpc";
 import { getIconForUrl, EXTERNAL_ICON } from "@/lib/link-icons";
 import { RiSendPlaneFill, RiArrowLeftLine, RiShareLine } from "react-icons/ri";
@@ -43,9 +42,8 @@ function createComment(text: string): PublicIdeaComment {
 
 export default function PublicIdeaPage() {
   const params = useParams<{ id: string }>();
-  const router = useRouter();
 
-  const { data, isLoading } = trpc.idea.byId.useQuery({
+  const { data, isLoading } = trpc.idea.byIdPublic.useQuery({
     id: params.id,
   });
 
@@ -134,22 +132,19 @@ export default function PublicIdeaPage() {
       .catch(() => {});
   };
 
-  const status = data.status as IdeaStatus;
   const links = data.links;
-  const ExternalIcon = EXTERNAL_ICON;
 
   return (
     <div className="min-h-screen bg-[#050509] text-white">
       <div className="mx-auto flex min-h-screen max-w-5xl flex-col px-6 py-6">
         <header className="mb-4 flex items-center justify-between gap-4">
-          <button
-            type="button"
-            onClick={() => router.back()}
+          <Link
+            href="/hub"
             className="inline-flex items-center gap-2 rounded-full border border-zinc-800 bg-zinc-950 px-3 py-1.5 text-[12px] text-zinc-300 transition hover:border-zinc-700 hover:bg-zinc-900"
           >
             <RiArrowLeftLine className="h-3.5 w-3.5" />
             <span>Retour</span>
-          </button>
+          </Link>
 
           <div className="flex items-center gap-3 text-[11px] text-zinc-500">
             <span className="max-w-[260px] truncate">{titleLabel}</span>
@@ -166,7 +161,7 @@ export default function PublicIdeaPage() {
 
         <main className="mb-4 rounded-3xl border border-zinc-900 bg-[#060010] shadow-[0_0_40px_rgba(0,0,0,0.5)]">
           <div className="border-b border-zinc-900 px-8 pb-5 pt-6 space-y-3">
-            <div className="mb-2 flex flex-wrap items-center gap-2 text-[11px] text-zinc-400">
+            <div className="flex flex-wrap items-center gap-2 text-[11px] text-zinc-400">
               {tgiLabel && (
                 <span className="inline-flex items-center gap-2 rounded-full bg-zinc-900 px-3 py-1 font-mono text-[11px] text-indigo-300">
                   <span className="h-1.5 w-1.5 rounded-full bg-indigo-400" />
@@ -176,12 +171,7 @@ export default function PublicIdeaPage() {
               <span className="inline-flex items-center gap-2 rounded-full bg-zinc-900 px-3 py-1 text-[11px] text-zinc-200">
                 <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" />
                 {status === "INBOX" && "Inbox"}
-                {status === "DEV" && "En cours"}
-                {status === "ARCHIVE" && "Archivée"}
-                {status !== "INBOX" &&
-                  status !== "DEV" &&
-                  status !== "ARCHIVE" &&
-                  String(status)}
+                {status !== "INBOX" && String(status)}
               </span>
               {totalReactions > 0 && (
                 <span className="rounded-full bg-zinc-900 px-3 py-1 text-[11px] text-zinc-300">
@@ -220,14 +210,14 @@ export default function PublicIdeaPage() {
                             <Icon className="h-4 w-4 text-zinc-200" />
                           </div>
                           <div className="flex min-w-0 flex-col">
-                            <span className="truncate text-zinc-100 text-[13px]">
+                            <span className="truncate text-[13px] text-zinc-100">
                               {link.label || host}
                             </span>
                             <span className="truncate text-[11px] text-zinc-500">
                               {host}
                             </span>
                           </div>
-                          <ExternalIcon className="ml-auto h-4 w-4 flex-shrink-0 text-zinc-500" />
+                          <EXTERNAL_ICON className="ml-auto h-4 w-4 flex-shrink-0 text-zinc-500" />
                         </a>
                       </li>
                     );
@@ -237,7 +227,7 @@ export default function PublicIdeaPage() {
             )}
           </div>
 
-          <div className="px-8 pb-8 pt-4 space-y-8">
+          <div className="px-8 pb-10 pt-5 space-y-9">
             <section>
               <PublicRichText content={data.managerContent ?? ""} />
             </section>

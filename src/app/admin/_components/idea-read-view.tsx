@@ -8,17 +8,29 @@ import { AiOutlineThunderbolt } from "react-icons/ai";
 import { TbListDetails } from "react-icons/tb";
 import { IoKeyOutline } from "react-icons/io5";
 import { FaLink, FaRegStickyNote } from "react-icons/fa";
-import type { IdeaStatus, IdeaLink, IdeaBullet } from "@/lib/mock-data";
 import { getIconForUrl } from "@/lib/link-icons";
+
+type AdminIdeaStatus = string;
+
+type AdminIdeaLink = {
+  id: string;
+  label: string;
+  url: string;
+};
+
+type AdminIdeaBullet = {
+  id: string;
+  text: string;
+};
 
 type IdeaReadViewProps = {
   titleLabel: string;
   tgiLabel: string | null;
-  activeStatus: IdeaStatus;
+  activeStatus: AdminIdeaStatus;
   managerSummary: string;
   managerContent: string;
-  managerBullets: IdeaBullet[];
-  managerLinks: IdeaLink[];
+  managerBullets: AdminIdeaBullet[];
+  managerLinks: AdminIdeaLink[];
   managerNote: string;
 };
 
@@ -153,6 +165,14 @@ export function IdeaReadView({
             <div className="space-y-1.5 text-xs">
               {managerLinks.map((link) => {
                 const Icon = getIconForUrl(link.url);
+
+                let host = "";
+                try {
+                  host = new URL(link.url).hostname.replace(/^www\./i, "");
+                } catch {
+                  host = link.url;
+                }
+
                 return (
                   <a
                     key={link.id}
@@ -169,7 +189,7 @@ export function IdeaReadView({
                         {link.label}
                       </span>
                       <span className="truncate text-[10px] text-zinc-500">
-                        {link.url}
+                        {host}
                       </span>
                     </div>
                     <FiExternalLink className="ml-auto h-3 w-3 flex-shrink-0 text-zinc-500" />

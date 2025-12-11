@@ -4,10 +4,10 @@ import { useMemo } from "react";
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { RiDragMove2Fill } from "react-icons/ri";
-import type { IdeaItem } from "@/lib/mock-data";
+import type { AdminIdeaItem } from "../use-admin-ideas";
 
 type IdeaListItemProps = {
-  idea: IdeaItem;
+  idea: AdminIdeaItem;
   isActive: boolean;
   isEditing: boolean;
   draftLabel: string;

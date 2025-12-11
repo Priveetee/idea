@@ -2,12 +2,11 @@
 
 import {
   DndContext,
-  DragEndEvent,
+  type DragEndEvent,
   PointerSensor,
   useSensor,
   useSensors,
 } from "@dnd-kit/core";
-import type { IdeaStatus } from "@/lib/mock-data";
 import { AdminHeader } from "./_components/admin-header";
 import { AdminSidebar } from "./_components/admin-sidebar";
 import { AdminIdeaList } from "./_components/admin-idea-list";
@@ -42,6 +41,7 @@ export default function AdminPage() {
     moveIdeaToFolder,
     updateDetails,
     clearSelection,
+    setVisibility,
   } = useAdminIdeas();
 
   const sensors = useSensors(
@@ -86,7 +86,7 @@ export default function AdminPage() {
 
     if (overId.startsWith("folder-")) {
       const folderId = overId.replace("folder-", "");
-      if (!folderId || folderId === "") return;
+      if (!folderId) return;
       moveIdeaToFolder(ideaId, folderId);
       return;
     }
@@ -143,6 +143,7 @@ export default function AdminPage() {
               duplicateFolderAction={({ id }) => duplicateFolder(id)}
               deleteFolderAction={({ id }) => deleteFolder(id)}
             />
+
             <AdminIdeaList
               activeStatus={activeStatus}
               folders={folders}
@@ -153,10 +154,11 @@ export default function AdminPage() {
               renameIdeaAction={({ id, label }) => renameIdea(id, label)}
               deleteIdeaAction={({ id }) => deleteIdea(id)}
             />
+
             <div className="col-span-5 h-full overflow-y-auto">
               <AdminIdeaPanel
                 selected={selected}
-                activeStatus={activeStatus as IdeaStatus}
+                activeStatus={activeStatus}
                 managerSummary={selectedIdeaData?.managerSummary ?? ""}
                 managerContent={selectedIdeaData?.managerContent ?? ""}
                 managerLinks={selectedIdeaData?.managerLinks ?? []}
@@ -164,6 +166,7 @@ export default function AdminPage() {
                 managerNote={selectedIdeaData?.managerNote ?? ""}
                 updateIdeaDetailsAction={updateDetails}
                 clearSelectionAction={clearSelection}
+                setVisibilityAction={setVisibility}
               />
             </div>
           </div>

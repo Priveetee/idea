@@ -6,7 +6,6 @@ import { httpBatchLink } from "@trpc/client";
 import superjson from "superjson";
 import { trpc } from "@/lib/trpc";
 import "./globals.css";
-import { IdeaStoreProvider } from "./admin/_providers/idea-store";
 
 const queryClient = new QueryClient();
 
@@ -25,7 +24,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
       <body className="bg-[#050509] text-white">
         <trpc.Provider client={trpcClient} queryClient={queryClient}>
           <QueryClientProvider client={queryClient}>
-            <IdeaStoreProvider>{children}</IdeaStoreProvider>
+            {children}
           </QueryClientProvider>
         </trpc.Provider>
       </body>

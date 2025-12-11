@@ -1,20 +1,36 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import {
-  BASE_FOLDERS,
-  type FolderConfig,
-  type IdeaItem,
-  type IdeaStatus,
-} from "@/lib/mock-data";
 import { trpc } from "@/lib/trpc";
 
-type SelectedIdea = {
-  status: IdeaStatus | string;
-  index: number;
-  label: string;
+export type AdminIdeaStatus = string;
+
+export type AdminIdeaLink = { id: string; label: string; url: string };
+export type AdminIdeaBullet = { id: string; text: string };
+
+export type AdminIdeaItem = {
   id: string;
+  label: string;
+  status: AdminIdeaStatus;
+  managerSummary: string;
+  managerContent: string;
+  managerLinks: AdminIdeaLink[];
+  managerBullets: AdminIdeaBullet[];
+  managerNote: string;
+  isPublic: boolean;
+  createdAt: Date | string | number;
 };
+
+export type AdminFolderConfig = {
+  id: string;
+  label: string;
+  color: string;
+};
+
+const INITIAL_FOLDERS: AdminFolderConfig[] = [
+  { id: "INBOX", label: "Inbox général", color: "#5227FF" },
+  { id: "ARCHIVE", label: "Archives", color: "#64748b" },
+];
 
 type PrismaIdea = {
   id: string;
@@ -23,11 +39,21 @@ type PrismaIdea = {
   managerSummary: string | null;
   managerContent: string | null;
   managerNote: string | null;
+  isPublic: boolean;
+  createdAt: string | Date;
   links: { id: string; label: string; url: string }[];
   bullets: { id: string; text: string }[];
 };
 
-function prismaIdeaToIdeaItem(db: PrismaIdea): IdeaItem {
+type SelectedIdea = {
+  status: AdminIdeaStatus;
+  index: number;
+  label: string;
+  id: string;
+  isPublic?: boolean;
+};
+
+function prismaIdeaToIdeaItem(db: PrismaIdea): AdminIdeaItem {
   return {
     id: db.id,
     label: db.label,
@@ -44,10 +70,12 @@ function prismaIdeaToIdeaItem(db: PrismaIdea): IdeaItem {
       text: b.text,
     })),
     managerNote: db.managerNote ?? "",
+    isPublic: db.isPublic ?? false,
+    createdAt: db.createdAt,
   };
 }
 
-function generateFolderId(existing: FolderConfig[]): string {
+function generateFolderId(existing: AdminFolderConfig[]): string {
   let i = 1;
   while (true) {
     const candidate = `CUSTOM_${i}`;
@@ -62,14 +90,13 @@ export function useAdminIdeas() {
   const renameIdea = trpc.idea.rename.useMutation();
   const deleteIdea = trpc.idea.delete.useMutation();
   const updateIdeaDetails = trpc.idea.updateDetails.useMutation();
+  const setVisibilityMutation = trpc.idea.setVisibility.useMutation();
 
-  const [folders, setFolders] = useState<FolderConfig[]>(BASE_FOLDERS);
-  const [ideas, setIdeas] = useState<IdeaItem[]>(
+  const [folders, setFolders] = useState<AdminFolderConfig[]>(INITIAL_FOLDERS);
+  const [ideas, setIdeas] = useState<AdminIdeaItem[]>(
     (data ?? []).map((d) => prismaIdeaToIdeaItem(d as PrismaIdea)),
   );
-  const [activeStatus, setActiveStatus] = useState<IdeaStatus | string>(
-    "INBOX",
-  );
+  const [activeStatus, setActiveStatus] = useState<AdminIdeaStatus>("INBOX");
   const [selected, setSelected] = useState<SelectedIdea | null>(null);
 
   const filteredIdeas = useMemo(
@@ -79,10 +106,10 @@ export function useAdminIdeas() {
 
   const totalIdeas = ideas.length;
   const inboxCount = ideas.filter((i) => i.status === "INBOX").length;
-  const devCount = ideas.filter((i) => i.status === "DEV").length;
+  const devCount = 0;
   const archiveCount = ideas.filter((i) => i.status === "ARCHIVE").length;
 
-  const changeStatus = (status: IdeaStatus | string) => {
+  const changeStatus = (status: AdminIdeaStatus) => {
     setActiveStatus(status);
     setSelected(null);
   };
@@ -95,12 +122,13 @@ export function useAdminIdeas() {
       index: payload.index,
       label: item.label,
       id: item.id,
+      isPublic: item.isPublic,
     });
   };
 
   const addIdea = async (payload: {
     label: string;
-    status: IdeaStatus | string;
+    status: AdminIdeaStatus;
   }) => {
     try {
       const created = await createIdea.mutateAsync({
@@ -116,9 +144,7 @@ export function useAdminIdeas() {
         ...prev,
         prismaIdeaToIdeaItem(created as PrismaIdea),
       ]);
-    } catch {
-      // ignore
-    }
+    } catch {}
   };
 
   const renameIdeaLocal = async (id: string, label: string) => {
@@ -132,9 +158,7 @@ export function useAdminIdeas() {
     );
     try {
       await renameIdea.mutateAsync({ id, label: trimmed });
-    } catch {
-      // ignore
-    }
+    } catch {}
   };
 
   const deleteIdeaLocal = async (id: string) => {
@@ -142,14 +166,12 @@ export function useAdminIdeas() {
     setSelected((prev) => (prev && prev.id === id ? null : prev));
     try {
       await deleteIdea.mutateAsync({ id });
-    } catch {
-      // ignore
-    }
+    } catch {}
   };
 
   const addFolder = () => {
     const newId = generateFolderId(folders);
-    const folder: FolderConfig = {
+    const folder: AdminFolderConfig = {
       id: newId,
       label: `Espace ${folders.length + 1}`,
       color: "#22c55e",
@@ -173,7 +195,7 @@ export function useAdminIdeas() {
       if (!source) return prevFolders;
 
       const newFolderId = generateFolderId(prevFolders);
-      const duplicateFolderConfig: FolderConfig = {
+      const duplicateFolderConfig: AdminFolderConfig = {
         id: newFolderId,
         label: `${source.label} (copie)`,
         color: source.color,
@@ -199,7 +221,7 @@ export function useAdminIdeas() {
   };
 
   const deleteFolder = (id: string) => {
-    if (id === "INBOX" || id === "DEV" || id === "ARCHIVE") return;
+    if (id === "INBOX" || id === "ARCHIVE") return;
 
     setFolders((prevFolders) => {
       const nextFolders = prevFolders.filter((f) => f.id !== id);
@@ -223,7 +245,7 @@ export function useAdminIdeas() {
   const reorderFolders = (orderedIds: string[]) => {
     setFolders((prev) => {
       const byId = new Map(prev.map((f) => [f.id, f]));
-      const next: FolderConfig[] = [];
+      const next: AdminFolderConfig[] = [];
 
       orderedIds.forEach((id) => {
         const folder = byId.get(id);
@@ -249,7 +271,7 @@ export function useAdminIdeas() {
 
       const orderedInStatus = orderedIds
         .map((id) => byId.get(id))
-        .filter((idea): idea is IdeaItem => idea !== undefined)
+        .filter((idea): idea is AdminIdeaItem => idea !== undefined)
         .filter((idea) => idea.status === currentStatus);
 
       if (orderedInStatus.length !== inStatus.length) return prev;
@@ -271,8 +293,8 @@ export function useAdminIdeas() {
     id: string;
     managerSummary: string;
     managerContent: string;
-    managerLinks: IdeaItem["managerLinks"] | undefined;
-    managerBullets: IdeaItem["managerBullets"] | undefined;
+    managerLinks: AdminIdeaLink[] | undefined;
+    managerBullets: AdminIdeaBullet[] | undefined;
     managerNote: string;
   }) => {
     const safeLinks = payload.managerLinks ?? [];
@@ -308,9 +330,23 @@ export function useAdminIdeas() {
           text: b.text,
         })),
       });
-    } catch {
-      // ignore
-    }
+    } catch {}
+  };
+
+  const setVisibility = async (payload: { id: string; isPublic: boolean }) => {
+    setIdeas((prev) =>
+      prev.map((idea) =>
+        idea.id === payload.id ? { ...idea, isPublic: payload.isPublic } : idea,
+      ),
+    );
+    setSelected((prev) =>
+      prev && prev.id === payload.id
+        ? { ...prev, isPublic: payload.isPublic }
+        : prev,
+    );
+    try {
+      await setVisibilityMutation.mutateAsync(payload);
+    } catch {}
   };
 
   const clearSelection = () => {
@@ -349,5 +385,6 @@ export function useAdminIdeas() {
     moveIdeaToFolder,
     updateDetails,
     clearSelection,
+    setVisibility,
   };
 }

@@ -1,11 +1,11 @@
 "use client";
 
 import { FaPlus } from "react-icons/fa6";
-import type { IdeaBullet } from "@/lib/mock-data";
+import type { AdminIdeaBullet } from "../use-admin-ideas";
 
 type IdeaBulletsEditorProps = {
-  bullets: IdeaBullet[];
-  onChange: (_: IdeaBullet[]) => void;
+  bullets: AdminIdeaBullet[];
+  onChange: (_: AdminIdeaBullet[]) => void;
 };
 
 function genId(prefix: string) {

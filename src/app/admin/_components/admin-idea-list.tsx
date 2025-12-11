@@ -5,30 +5,38 @@ import {
   SortableContext,
   verticalListSortingStrategy,
 } from "@dnd-kit/sortable";
-import {
-  getFolderColor,
-  getFolderLabel,
-  type IdeaStatus,
-  type IdeaItem,
-  type FolderConfig,
-} from "@/lib/mock-data";
 import { IdeaCreationModal } from "./idea-creation-modal";
 import { IdeaListHeader } from "./idea-list-header";
 import { IdeaListItem } from "./idea-list-item";
 import { IdeaDeleteModal } from "./idea-delete-modal";
+import type {
+  AdminFolderConfig,
+  AdminIdeaItem,
+  AdminIdeaStatus,
+} from "../use-admin-ideas";
 
 type SortMode = "recent" | "old";
 
 type AdminIdeaListProps = {
-  activeStatus: IdeaStatus | string;
-  folders: FolderConfig[];
-  items: IdeaItem[];
+  activeStatus: AdminIdeaStatus;
+  folders: AdminFolderConfig[];
+  items: AdminIdeaItem[];
   selectAction: (_: { item: string; index: number }) => void;
-  addIdeaAction: (_: { label: string; status: IdeaStatus | string }) => void;
+  addIdeaAction: (_: { label: string; status: AdminIdeaStatus }) => void;
   addFolderAction: () => void;
   renameIdeaAction: (_: { id: string; label: string }) => void;
   deleteIdeaAction: (_: { id: string }) => void;
 };
+
+function getFolderColor(status: string, folders: AdminFolderConfig[]) {
+  const found = folders.find((f) => f.id === status);
+  return found?.color ?? "#52525b";
+}
+
+function getFolderLabel(status: string, folders: AdminFolderConfig[]) {
+  const found = folders.find((f) => f.id === status);
+  return found?.label ?? String(status);
+}
 
 export function AdminIdeaList({
   activeStatus,
@@ -57,8 +65,12 @@ export function AdminIdeaList({
 
     const sortedById =
       sortMode === "recent"
-        ? base.sort((a, b) => Number(b.id) - Number(a.id))
-        : base.sort((a, b) => Number(a.id) - Number(b.id));
+        ? base.sort(
+            (a, b) => Number(b.createdAt ?? 0) - Number(a.createdAt ?? 0),
+          )
+        : base.sort(
+            (a, b) => Number(a.createdAt ?? 0) - Number(b.createdAt ?? 0),
+          );
 
     if (!query.trim()) return sortedById;
 
@@ -66,12 +78,12 @@ export function AdminIdeaList({
     return sortedById.filter((i) => i.label.toLowerCase().includes(q));
   }, [items, query, sortMode]);
 
-  const handleRowSelect = (idea: IdeaItem, index: number) => {
+  const handleRowSelect = (idea: AdminIdeaItem, index: number) => {
     setActiveId(idea.id);
     selectAction({ item: idea.label, index });
   };
 
-  const handleStartEditing = (idea: IdeaItem) => {
+  const handleStartEditing = (idea: AdminIdeaItem) => {
     setEditingId(idea.id);
     setEditingDraft(idea.label);
     setActionsMenuId(null);

@@ -1,8 +1,9 @@
 "use client";
 
 import { useRef, useState, type KeyboardEvent } from "react";
+import { useRouter } from "next/navigation";
 import { z } from "zod";
-import type { IdeaLink } from "@/lib/mock-data";
+import { trpc } from "@/lib/trpc";
 import { IdeaNewFormView } from "./idea-new-form-view";
 
 export type IdeaNewFormPayload = {
@@ -13,6 +14,12 @@ export type IdeaNewFormPayload = {
   complexity?: "faible" | "moyenne" | "forte";
   tag?: string;
   links: IdeaLink[];
+};
+
+type IdeaLink = {
+  id: string;
+  label: string;
+  url: string;
 };
 
 const ideaFormSchema = z.object({
@@ -28,20 +35,32 @@ const ideaFormSchema = z.object({
 
 type IdeaFormValues = z.infer<typeof ideaFormSchema>;
 
-type IdeaNewFormStateProps = {
-  onValidSubmit: (_payload: IdeaNewFormPayload) => void;
-  submitting: boolean;
-  externalError: string | null;
-};
-
 function generateLinkId(existing: IdeaLink[]): string {
   let i = existing.length + 1;
   while (existing.some((link) => link.id === String(i))) i += 1;
   return String(i);
 }
 
-export function IdeaNewFormState(props: IdeaNewFormStateProps) {
-  const { onValidSubmit, submitting, externalError } = props;
+type IdeaNewFormStateProps = {
+  onValidSubmit: (_payload: IdeaNewFormPayload) => void;
+  submitting: boolean;
+  externalError: string | null;
+};
+
+export function IdeaNewFormState({
+  onValidSubmit,
+  submitting,
+  externalError,
+}: IdeaNewFormStateProps) {
+  const router = useRouter();
+  const utils = trpc.useUtils();
+
+  const createIdea = trpc.idea.create.useMutation({
+    async onSuccess() {
+      await utils.idea.listPublic.invalidate();
+      router.push("/hub");
+    },
+  });
 
   const [tgi, setTgi] = useState("");
   const [title, setTitle] = useState("");
@@ -62,6 +81,8 @@ export function IdeaNewFormState(props: IdeaNewFormStateProps) {
   }>({});
 
   const titleRef = useRef<HTMLTextAreaElement | null>(null);
+
+  const submittingLocal = createIdea.isPending || submitting;
 
   const isTgiRoughlyValid = /^T[0-9]{7}$/.test(tgi.trim());
   const isTitleRoughlyValid = title.trim().length > 0;
@@ -106,10 +127,10 @@ export function IdeaNewFormState(props: IdeaNewFormStateProps) {
     const payload: IdeaNewFormPayload = {
       tgi: data.tgi,
       title: data.title,
-      description: data.description,
-      impact: data.impact,
-      complexity: data.complexity,
-      tag: data.tag,
+      description: data.description ?? undefined,
+      impact: data.impact ?? undefined,
+      complexity: data.complexity ?? undefined,
+      tag: data.tag ?? undefined,
       links,
     };
 
@@ -160,8 +181,6 @@ export function IdeaNewFormState(props: IdeaNewFormStateProps) {
     setLinks((prev) => prev.filter((l) => l.id !== id));
   };
 
-  const mergedError = error ?? externalError;
-
   const previewTitle = (() => {
     const safeTgi = tgi || "TXXXXXXX";
     const base = title || "Titre de votre idée";
@@ -173,10 +192,10 @@ export function IdeaNewFormState(props: IdeaNewFormStateProps) {
   if (complexity) previewMetaParts.push(`Complexité : ${complexity}`);
   if (tag.trim()) previewMetaParts.push(`Tag : ${tag.trim()}`);
 
+  const hasAnyMeta = impact || complexity || tag.trim();
+
   const titleLength = title.trim().length;
   const titleTooLong = titleLength > 200;
-
-  const hasAnyMeta = impact || complexity || tag.trim();
 
   return (
     <IdeaNewFormView
@@ -198,8 +217,8 @@ export function IdeaNewFormState(props: IdeaNewFormStateProps) {
       addLink={handleAddLink}
       removeLink={handleRemoveLink}
       fieldError={fieldError}
-      error={mergedError}
-      submitting={submitting}
+      error={error ?? externalError ?? createIdea.error?.message ?? null}
+      submitting={submittingLocal}
       isFormRoughlyValid={isFormRoughlyValid}
       titleLength={titleLength}
       titleTooLong={titleTooLong}

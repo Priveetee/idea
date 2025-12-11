@@ -43,10 +43,10 @@ export function PublicRichText({ content }: PublicRichTextProps) {
   const ExternalIcon = EXTERNAL_ICON;
 
   return (
-    <div className="space-y-2">
+    <div className="space-y-3">
       <div
-        className={`rounded-2xl bg-zinc-950/60 px-4 py-3 text-[13px] leading-relaxed text-zinc-200 ${
-          expanded ? "" : "max-h-40 overflow-hidden"
+        className={`rounded-2xl bg-zinc-950/60 px-5 py-4 text-[13px] leading-relaxed text-zinc-200 ${
+          expanded ? "" : "max-h-48 overflow-hidden"
         }`}
       >
         <p className="whitespace-pre-wrap">
@@ -66,12 +66,15 @@ export function PublicRichText({ content }: PublicRichTextProps) {
             }
 
             return (
-              <span key={`l-${idx}`} className="inline-block align-middle">
+              <span
+                key={`l-${idx}`}
+                className="inline-flex items-center gap-1 align-middle"
+              >
                 <a
                   href={seg.url}
                   target="_blank"
                   rel="noreferrer noopener"
-                  className="ml-1 inline-flex items-center gap-1 rounded-full bg-zinc-900/80 px-2 py-0.5 text-[12px] text-zinc-100 underline-offset-2 hover:bg-zinc-800 hover:underline"
+                  className="inline-flex items-center gap-1 rounded-full bg-zinc-900/80 px-2 py-0.5 text-[12px] text-zinc-100 underline-offset-2 hover:bg-zinc-800 hover:underline"
                 >
                   <span className="flex h-4 w-4 items-center justify-center rounded-full bg-zinc-950">
                     <Icon className="h-3 w-3" />
