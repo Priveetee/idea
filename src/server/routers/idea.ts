@@ -197,6 +197,21 @@ export const ideaRouter = router({
       return { success: true };
     }),
 
+  moveToFolder: publicProcedure
+    .input(
+      z.object({
+        id: z.string(),
+        status: z.string().min(1),
+      }),
+    )
+    .mutation(async ({ input }) => {
+      const idea = await prisma.idea.update({
+        where: { id: input.id },
+        data: { status: input.status },
+      });
+      return idea;
+    }),
+
   setVisibility: publicProcedure
     .input(
       z.object({

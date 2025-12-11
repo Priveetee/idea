@@ -85,7 +85,10 @@ export default function AdminPage() {
     const ideaId = activeId.replace("idea-", "");
 
     if (overId.startsWith("folder-")) {
-      const folderId = overId.replace("folder-", "");
+      let folderId = overId.replace("folder-", "");
+      if (folderId.startsWith("sort-")) {
+        folderId = folderId.replace("sort-", "");
+      }
       if (!folderId) return;
       moveIdeaToFolder(ideaId, folderId);
       return;

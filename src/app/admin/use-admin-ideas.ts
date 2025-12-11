@@ -91,6 +91,7 @@ export function useAdminIdeas() {
   const deleteIdea = trpc.idea.delete.useMutation();
   const updateIdeaDetails = trpc.idea.updateDetails.useMutation();
   const setVisibilityMutation = trpc.idea.setVisibility.useMutation();
+  const moveToFolderMutation = trpc.idea.moveToFolder.useMutation();
 
   const [folders, setFolders] = useState<AdminFolderConfig[]>(INITIAL_FOLDERS);
   const [activeStatus, setActiveStatus] = useState<AdminIdeaStatus>("INBOX");
@@ -238,12 +239,32 @@ export function useAdminIdeas() {
   };
 
   const reorderIdeas = (orderedIds: string[]) => {
-    const _ = orderedIds;
+    const currentStatus = activeStatus;
+    const byId = new Map(ideas.map((i) => [i.id, i]));
+    const inStatus = ideas.filter((i) => i.status === currentStatus);
+    const others = ideas.filter((i) => i.status !== currentStatus);
+
+    const orderedInStatus = orderedIds
+      .map((id) => byId.get(id))
+      .filter((idea): idea is AdminIdeaItem => idea !== undefined)
+      .filter((idea) => idea.status === currentStatus);
+
+    if (orderedInStatus.length !== inStatus.length) return;
+
+    void others;
   };
 
-  const moveIdeaToFolder = (ideaId: string, targetFolderId: string) => {
-    const _a = ideaId;
-    const _b = targetFolderId;
+  const moveIdeaToFolder = async (ideaId: string, targetFolderId: string) => {
+    try {
+      await moveToFolderMutation.mutateAsync({
+        id: ideaId,
+        status: targetFolderId,
+      });
+      await refetch();
+    } catch {}
+    setSelected((prev) =>
+      prev && prev.id === ideaId ? { ...prev, status: targetFolderId } : prev,
+    );
   };
 
   const updateDetails = async (payload: {
