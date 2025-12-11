@@ -22,6 +22,7 @@ function createComment(text: string): Comment {
 }
 
 export default function HubPage() {
+  // Idées publiques uniquement
   const { data, isLoading } = trpc.idea.listPublic.useQuery();
 
   const [reactions, setReactions] = useState<ReactionMap>({});
@@ -103,7 +104,7 @@ export default function HubPage() {
           <div className="flex items-center gap-4">
             <Link
               href="/idea/new"
-              className="group relative flex h-9 items-center gap-2 overflow-hidden rounded-full bgWHITE px-5 text-[13px] font-bold text-black transition hover:bg-zinc-200"
+              className="group relative flex h-9 items-center gap-2 overflow-hidden rounded-full bg-white px-5 text-[13px] font-bold text-black transition hover:bg-zinc-200"
             >
               <span>Proposer une idée</span>
             </Link>
