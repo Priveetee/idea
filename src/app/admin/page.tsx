@@ -1,6 +1,5 @@
 "use client";
 
-import { useMemo, useState } from "react";
 import {
   DndContext,
   DragEndEvent,
@@ -8,267 +7,48 @@ import {
   useSensor,
   useSensors,
 } from "@dnd-kit/core";
-import {
-  BASE_FOLDERS,
-  type IdeaStatus,
-  type IdeaItem,
-  type FolderConfig,
-} from "@/lib/mock-data";
+import type { IdeaStatus } from "@/lib/mock-data";
 import { AdminHeader } from "./_components/admin-header";
 import { AdminSidebar } from "./_components/admin-sidebar";
 import { AdminIdeaList } from "./_components/admin-idea-list";
 import { AdminIdeaPanel } from "./_components/admin-idea-panel";
-import { useIdeaStore } from "./_providers/idea-store";
-
-type SelectedIdea = {
-  status: IdeaStatus | string;
-  index: number;
-  label: string;
-  id: string;
-};
-
-function generateFolderId(existing: FolderConfig[]): string {
-  let i = 1;
-  while (true) {
-    const candidate = `CUSTOM_${i}`;
-    if (!existing.some((f) => f.id === candidate)) return candidate;
-    i += 1;
-  }
-}
-
-function generateIdeaId(existing: IdeaItem[]): string {
-  let i = existing.length + 1;
-  while (existing.some((idea) => idea.id === String(i))) {
-    i += 1;
-  }
-  return String(i);
-}
+import { useAdminIdeas } from "./use-admin-ideas";
 
 export default function AdminPage() {
-  const [folders, setFolders] = useState<FolderConfig[]>(BASE_FOLDERS);
-  const { ideas, setIdeas } = useIdeaStore();
-  const [activeStatus, setActiveStatus] = useState<IdeaStatus | string>(
-    "INBOX",
-  );
-  const [selected, setSelected] = useState<SelectedIdea | null>(null);
+  const {
+    isLoading,
+    folders,
+    ideas,
+    activeStatus,
+    selected,
+    filteredIdeas,
+    totalIdeas,
+    inboxCount,
+    devCount,
+    archiveCount,
+    selectedIdeaData,
+    changeStatus,
+    selectIdea,
+    addIdea,
+    renameIdea,
+    deleteIdea,
+    addFolder,
+    renameFolder,
+    changeFolderColor,
+    duplicateFolder,
+    deleteFolder,
+    reorderFolders,
+    reorderIdeas,
+    moveIdeaToFolder,
+    updateDetails,
+    clearSelection,
+  } = useAdminIdeas();
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
       activationConstraint: { distance: 4 },
     }),
   );
-
-  const filteredIdeas = useMemo(
-    () => ideas.filter((idea) => idea.status === activeStatus),
-    [ideas, activeStatus],
-  );
-
-  const totalIdeas = ideas.length;
-  const inboxCount = ideas.filter((i) => i.status === "INBOX").length;
-  const devCount = ideas.filter((i) => i.status === "DEV").length;
-  const archiveCount = ideas.filter((i) => i.status === "ARCHIVE").length;
-
-  const handleChangeStatus = (status: IdeaStatus | string) => {
-    setActiveStatus(status);
-    setSelected(null);
-  };
-
-  const handleSelectIdea = (payload: { item: string; index: number }) => {
-    const item = filteredIdeas[payload.index];
-    if (!item) return;
-    setSelected({
-      status: item.status,
-      index: payload.index,
-      label: item.label,
-      id: item.id,
-    });
-  };
-
-  const handleAddIdea = (payload: {
-    label: string;
-    status: IdeaStatus | string;
-  }) => {
-    setIdeas((prev) => {
-      const newId = generateIdeaId(prev);
-      const idea: IdeaItem = {
-        id: newId,
-        status: payload.status,
-        label: payload.label,
-        managerSummary: "",
-        managerContent: "",
-        managerLinks: [],
-        managerBullets: [],
-        managerNote: "",
-      };
-      return [...prev, idea];
-    });
-  };
-
-  const handleRenameIdea = (id: string, label: string) => {
-    setIdeas((prev) =>
-      prev.map((idea) => (idea.id === id ? { ...idea, label } : idea)),
-    );
-    setSelected((prev) => (prev && prev.id === id ? { ...prev, label } : prev));
-  };
-
-  const handleDeleteIdea = (id: string) => {
-    setIdeas((prev) => prev.filter((idea) => idea.id !== id));
-    setSelected((prev) => (prev && prev.id === id ? null : prev));
-  };
-
-  const handleAddFolder = () => {
-    const newId = generateFolderId(folders);
-    const folder: FolderConfig = {
-      id: newId,
-      label: `Espace ${folders.length + 1}`,
-      color: "#22c55e",
-    };
-    setFolders((prev) => [...prev, folder]);
-    setActiveStatus(newId);
-    setSelected(null);
-  };
-
-  const handleRenameFolder = (id: string, label: string) => {
-    setFolders((prev) => prev.map((f) => (f.id === id ? { ...f, label } : f)));
-  };
-
-  const handleChangeFolderColor = (id: string, color: string) => {
-    setFolders((prev) => prev.map((f) => (f.id === id ? { ...f, color } : f)));
-  };
-
-  const handleDuplicateFolder = (id: string) => {
-    setFolders((prevFolders) => {
-      const source = prevFolders.find((f) => f.id === id);
-      if (!source) return prevFolders;
-
-      const newFolderId = generateFolderId(prevFolders);
-      const duplicateFolder: FolderConfig = {
-        id: newFolderId,
-        label: `${source.label} (copie)`,
-        color: source.color,
-      };
-
-      setIdeas((prevIdeas) => {
-        const ideasInFolder = prevIdeas.filter((idea) => idea.status === id);
-        if (ideasInFolder.length === 0) return prevIdeas;
-
-        const nextIdeas = [...prevIdeas];
-        ideasInFolder.forEach((idea) => {
-          const newId = generateIdeaId(nextIdeas);
-          nextIdeas.push({
-            ...idea,
-            id: newId,
-            status: newFolderId,
-          });
-        });
-        return nextIdeas;
-      });
-
-      return [...prevFolders, duplicateFolder];
-    });
-  };
-
-  const handleDeleteFolder = (id: string) => {
-    if (id === "INBOX" || id === "DEV" || id === "ARCHIVE") return;
-
-    setFolders((prevFolders) => {
-      const nextFolders = prevFolders.filter((f) => f.id !== id);
-      if (nextFolders.length === 0) {
-        setActiveStatus("INBOX");
-      } else if (activeStatus === id) {
-        const fallback =
-          nextFolders.find((f) => f.id === "INBOX") ?? nextFolders[0];
-        setActiveStatus(fallback.id);
-      }
-      return nextFolders;
-    });
-
-    setIdeas((prevIdeas) => prevIdeas.filter((idea) => idea.status !== id));
-
-    if (selected && selected.status === id) {
-      setSelected(null);
-    }
-  };
-
-  const handleReorderFolders = (orderedIds: string[]) => {
-    setFolders((prev) => {
-      const byId = new Map(prev.map((f) => [f.id, f]));
-      const next: FolderConfig[] = [];
-
-      orderedIds.forEach((id) => {
-        const folder = byId.get(id);
-        if (folder) next.push(folder);
-      });
-
-      prev.forEach((folder) => {
-        if (!orderedIds.includes(folder.id)) {
-          next.push(folder);
-        }
-      });
-
-      return next;
-    });
-  };
-
-  const handleReorderIdeas = (orderedIds: string[]) => {
-    setIdeas((prev) => {
-      const byId = new Map(prev.map((i) => [i.id, i]));
-      const currentStatus = activeStatus;
-      const inStatus = prev.filter((i) => i.status === currentStatus);
-      const others = prev.filter((i) => i.status !== currentStatus);
-
-      const orderedInStatus = orderedIds
-        .map((id) => byId.get(id))
-        .filter((idea): idea is IdeaItem => idea !== undefined)
-        .filter((idea) => idea.status === currentStatus);
-
-      if (orderedInStatus.length !== inStatus.length) return prev;
-
-      return [...others, ...orderedInStatus];
-    });
-  };
-
-  const handleMoveIdeaToFolder = (ideaId: string, targetFolderId: string) => {
-    setIdeas((prev) =>
-      prev.map((idea) =>
-        idea.id === ideaId ? { ...idea, status: targetFolderId } : idea,
-      ),
-    );
-    if (selected?.id === ideaId) setSelected(null);
-  };
-
-  const handleUpdateIdeaDetails = (payload: {
-    id: string;
-    managerSummary: string;
-    managerContent: string;
-    managerLinks: IdeaItem["managerLinks"];
-    managerBullets: IdeaItem["managerBullets"];
-    managerNote: string;
-  }) => {
-    setIdeas((prev) =>
-      prev.map((idea) =>
-        idea.id === payload.id
-          ? {
-              ...idea,
-              managerSummary: payload.managerSummary,
-              managerContent: payload.managerContent,
-              managerLinks: payload.managerLinks,
-              managerBullets: payload.managerBullets,
-              managerNote: payload.managerNote,
-            }
-          : idea,
-      ),
-    );
-  };
-
-  const handleClearSelection = () => {
-    setSelected(null);
-  };
-
-  const selectedIdeaData =
-    selected && selected.status === activeStatus
-      ? ideas.find((i) => i.id === selected.id) || null
-      : null;
 
   const handleDragEnd = (event: DragEndEvent) => {
     const { active, over } = event;
@@ -295,7 +75,7 @@ export default function AdminPage() {
       const newOrder = [...ids];
       const [removed] = newOrder.splice(oldIndex, 1);
       newOrder.splice(newIndex, 0, removed);
-      handleReorderFolders(newOrder);
+      reorderFolders(newOrder);
       return;
     }
 
@@ -307,7 +87,7 @@ export default function AdminPage() {
     if (overId.startsWith("folder-")) {
       const folderId = overId.replace("folder-", "");
       if (!folderId || folderId === "") return;
-      handleMoveIdeaToFolder(ideaId, folderId);
+      moveIdeaToFolder(ideaId, folderId);
       return;
     }
 
@@ -327,9 +107,17 @@ export default function AdminPage() {
       const newOrder = [...idsInStatus];
       const [removed] = newOrder.splice(oldIndex, 1);
       newOrder.splice(newIndex, 0, removed);
-      handleReorderIdeas(newOrder);
+      reorderIdeas(newOrder);
     }
   };
+
+  if (isLoading && ideas.length === 0) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-[#050509] text-white">
+        <div className="text-sm text-zinc-500">Chargement des idées...</div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-[#050509] text-white">
@@ -347,25 +135,23 @@ export default function AdminPage() {
               folders={folders}
               ideas={ideas}
               activeStatus={activeStatus}
-              changeStatusAction={handleChangeStatus}
-              renameFolderAction={({ id, label }) =>
-                handleRenameFolder(id, label)
-              }
+              changeStatusAction={changeStatus}
+              renameFolderAction={({ id, label }) => renameFolder(id, label)}
               changeFolderColorAction={({ id, color }) =>
-                handleChangeFolderColor(id, color)
+                changeFolderColor(id, color)
               }
-              duplicateFolderAction={({ id }) => handleDuplicateFolder(id)}
-              deleteFolderAction={({ id }) => handleDeleteFolder(id)}
+              duplicateFolderAction={({ id }) => duplicateFolder(id)}
+              deleteFolderAction={({ id }) => deleteFolder(id)}
             />
             <AdminIdeaList
               activeStatus={activeStatus}
               folders={folders}
               items={filteredIdeas}
-              selectAction={handleSelectIdea}
-              addIdeaAction={handleAddIdea}
-              addFolderAction={handleAddFolder}
-              renameIdeaAction={({ id, label }) => handleRenameIdea(id, label)}
-              deleteIdeaAction={({ id }) => handleDeleteIdea(id)}
+              selectAction={selectIdea}
+              addIdeaAction={addIdea}
+              addFolderAction={addFolder}
+              renameIdeaAction={({ id, label }) => renameIdea(id, label)}
+              deleteIdeaAction={({ id }) => deleteIdea(id)}
             />
             <div className="col-span-5 h-full overflow-y-auto">
               <AdminIdeaPanel
@@ -376,8 +162,8 @@ export default function AdminPage() {
                 managerLinks={selectedIdeaData?.managerLinks ?? []}
                 managerBullets={selectedIdeaData?.managerBullets ?? []}
                 managerNote={selectedIdeaData?.managerNote ?? ""}
-                updateIdeaDetailsAction={handleUpdateIdeaDetails}
-                clearSelectionAction={handleClearSelection}
+                updateIdeaDetailsAction={updateDetails}
+                clearSelectionAction={clearSelection}
               />
             </div>
           </div>

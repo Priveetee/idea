@@ -87,4 +87,83 @@ export const ideaRouter = router({
       });
       return idea;
     }),
+
+  rename: publicProcedure
+    .input(
+      z.object({
+        id: z.string(),
+        label: z.string().min(1),
+      }),
+    )
+    .mutation(async ({ input }) => {
+      const idea = await prisma.idea.update({
+        where: { id: input.id },
+        data: { label: input.label },
+      });
+      return idea;
+    }),
+
+  updateDetails: publicProcedure
+    .input(
+      z.object({
+        id: z.string(),
+        managerSummary: z.string(),
+        managerContent: z.string(),
+        managerNote: z.string(),
+        links: z.array(
+          z.object({
+            id: z.string().optional(),
+            label: z.string(),
+            url: z.string().url(),
+          }),
+        ),
+        bullets: z.array(
+          z.object({
+            id: z.string().optional(),
+            text: z.string(),
+          }),
+        ),
+      }),
+    )
+    .mutation(async ({ input }) => {
+      const idea = await prisma.idea.update({
+        where: { id: input.id },
+        data: {
+          managerSummary: input.managerSummary,
+          managerContent: input.managerContent,
+          managerNote: input.managerNote,
+          links: {
+            deleteMany: { ideaId: input.id },
+            create: input.links.map((l) => ({
+              label: l.label,
+              url: l.url,
+            })),
+          },
+          bullets: {
+            deleteMany: { ideaId: input.id },
+            create: input.bullets.map((b) => ({
+              text: b.text,
+            })),
+          },
+        },
+        include: {
+          links: true,
+          bullets: true,
+        },
+      });
+      return idea;
+    }),
+
+  delete: publicProcedure
+    .input(
+      z.object({
+        id: z.string(),
+      }),
+    )
+    .mutation(async ({ input }) => {
+      await prisma.idea.delete({
+        where: { id: input.id },
+      });
+      return { success: true };
+    }),
 });
