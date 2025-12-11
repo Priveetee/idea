@@ -1,10 +1,10 @@
 "use client";
 
-import { useState, type KeyboardEvent, useMemo } from "react";
+import { useState, type KeyboardEvent } from "react";
 import Link from "next/link";
 import { notFound, useParams, useRouter } from "next/navigation";
-import { useIdeaStore } from "@/app/admin/_providers/idea-store";
 import type { IdeaStatus } from "@/lib/mock-data";
+import { trpc } from "@/lib/trpc";
 import { IdeaReadView } from "@/app/admin/_components/idea-read-view";
 import { HubIdeaHeaderBody } from "@/app/hub/_components/hub-idea-header-body";
 import { HubIdeaReactionsBar } from "@/app/hub/_components/hub-idea-reactions-bar";
@@ -44,41 +44,51 @@ function createComment(text: string): PublicIdeaComment {
 export default function PublicIdeaPage() {
   const params = useParams<{ id: string }>();
   const router = useRouter();
-  const { ideas } = useIdeaStore();
+
+  const { data, isLoading } = trpc.idea.byId.useQuery({
+    id: params.id,
+  });
+
   const [reactions, setReactions] = useState<ReactionMap>({});
   const [comments, setComments] = useState<CommentMap>({});
   const [commentValue, setCommentValue] = useState("");
   const [copied, setCopied] = useState(false);
 
-  const idea = ideas.find((i) => i.id === params.id);
-  if (!idea) {
+  if (!isLoading && !data) {
     notFound();
   }
 
-  const label = idea.label;
+  if (!data) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-[#050509] text-white">
+        <div className="text-sm text-zinc-500">
+          Chargement de l&apos;idée...
+        </div>
+      </div>
+    );
+  }
+
+  const label = data.label;
   const end = label.indexOf("]");
   const tgiLabel = end === -1 ? null : label.slice(0, end + 1);
   const titleLabel = end === -1 ? label : label.slice(end + 1).trim();
 
-  const ideaComments = comments[idea.id] ?? [];
+  const ideaComments = comments[data.id] ?? [];
 
-  const { stacked, totalReactions } = useMemo(() => {
-    const list = reactions[idea.id] ?? [];
-    const s = stackReactions(list);
-    const total = s.reduce((sum, r) => sum + r.count, 0);
-    return { stacked: s, totalReactions: total };
-  }, [reactions, idea.id]);
+  const list = reactions[data.id] ?? [];
+  const stacked = stackReactions(list);
+  const totalReactions = stacked.reduce((sum, r) => sum + r.count, 0);
 
   const handleToggleReaction = (emoji: string) => {
     setReactions((prev) => {
-      const current = prev[idea.id] ?? [];
+      const current = prev[data.id] ?? [];
       const exists = current.includes(emoji);
       const nextReactions = exists
         ? current.filter((e) => e !== emoji)
         : [...current, emoji];
       return {
         ...prev,
-        [idea.id]: nextReactions,
+        [data.id]: nextReactions,
       };
     });
   };
@@ -87,11 +97,11 @@ export default function PublicIdeaPage() {
     const trimmed = text.trim();
     if (!trimmed) return;
     setComments((prev) => {
-      const current = prev[idea.id] ?? [];
+      const current = prev[data.id] ?? [];
       const next = [...current, createComment(trimmed)];
       return {
         ...prev,
-        [idea.id]: next.slice(-20),
+        [data.id]: next.slice(-20),
       };
     });
   };
@@ -114,7 +124,7 @@ export default function PublicIdeaPage() {
 
   const handleCopyLink = () => {
     const href =
-      typeof window !== "undefined" ? window.location.href : `/idea/${idea.id}`;
+      typeof window !== "undefined" ? window.location.href : `/idea/${data.id}`;
     navigator.clipboard
       .writeText(href)
       .then(() => {
@@ -152,7 +162,23 @@ export default function PublicIdeaPage() {
 
         <div className="mb-6 rounded-3xl border border-zinc-900 bg-[#060010] shadow-[0_0_40px_rgba(0,0,0,0.5)]">
           <HubIdeaHeaderBody
-            idea={idea}
+            idea={{
+              id: data.id,
+              label: data.label,
+              status: data.status as IdeaStatus,
+              managerSummary: data.managerSummary ?? "",
+              managerContent: data.managerContent ?? "",
+              managerLinks: data.links.map((l) => ({
+                id: l.id,
+                label: l.label,
+                url: l.url,
+              })),
+              managerBullets: data.bullets.map((b) => ({
+                id: b.id,
+                text: b.text,
+              })),
+              managerNote: data.managerNote ?? "",
+            }}
             label={label}
             title={titleLabel}
             totalReactions={totalReactions}
@@ -162,12 +188,19 @@ export default function PublicIdeaPage() {
             <IdeaReadView
               titleLabel={titleLabel}
               tgiLabel={tgiLabel}
-              activeStatus={idea.status as IdeaStatus}
-              managerSummary={idea.managerSummary ?? ""}
-              managerContent={idea.managerContent ?? ""}
-              managerBullets={idea.managerBullets ?? []}
-              managerLinks={idea.managerLinks ?? []}
-              managerNote={""}
+              activeStatus={data.status as IdeaStatus}
+              managerSummary={data.managerSummary ?? ""}
+              managerContent={data.managerContent ?? ""}
+              managerBullets={data.bullets.map((b) => ({
+                id: b.id,
+                text: b.text,
+              }))}
+              managerLinks={data.links.map((l) => ({
+                id: l.id,
+                label: l.label,
+                url: l.url,
+              }))}
+              managerNote={data.managerNote ?? ""}
             />
 
             <div className="mt-6 border-t border-zinc-900 pt-4">

@@ -14,6 +14,23 @@ export const ideaRouter = router({
     return ideas;
   }),
 
+  byId: publicProcedure
+    .input(
+      z.object({
+        id: z.string(),
+      }),
+    )
+    .query(async ({ input }) => {
+      const idea = await prisma.idea.findUnique({
+        where: { id: input.id },
+        include: {
+          links: true,
+          bullets: true,
+        },
+      });
+      return idea;
+    }),
+
   create: publicProcedure
     .input(
       z.object({
