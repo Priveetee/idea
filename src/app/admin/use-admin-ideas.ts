@@ -85,7 +85,7 @@ function generateFolderId(existing: AdminFolderConfig[]): string {
 }
 
 export function useAdminIdeas() {
-  const { data, isLoading } = trpc.idea.list.useQuery();
+  const { data, isLoading, refetch } = trpc.idea.list.useQuery();
   const createIdea = trpc.idea.create.useMutation();
   const renameIdea = trpc.idea.rename.useMutation();
   const deleteIdea = trpc.idea.delete.useMutation();
@@ -93,11 +93,13 @@ export function useAdminIdeas() {
   const setVisibilityMutation = trpc.idea.setVisibility.useMutation();
 
   const [folders, setFolders] = useState<AdminFolderConfig[]>(INITIAL_FOLDERS);
-  const [ideas, setIdeas] = useState<AdminIdeaItem[]>(
-    (data ?? []).map((d) => prismaIdeaToIdeaItem(d as PrismaIdea)),
-  );
   const [activeStatus, setActiveStatus] = useState<AdminIdeaStatus>("INBOX");
   const [selected, setSelected] = useState<SelectedIdea | null>(null);
+
+  const ideas: AdminIdeaItem[] = useMemo(
+    () => ((data ?? []) as PrismaIdea[]).map(prismaIdeaToIdeaItem),
+    [data],
+  );
 
   const filteredIdeas = useMemo(
     () => ideas.filter((idea) => idea.status === activeStatus),
@@ -131,7 +133,7 @@ export function useAdminIdeas() {
     status: AdminIdeaStatus;
   }) => {
     try {
-      const created = await createIdea.mutateAsync({
+      await createIdea.mutateAsync({
         label: payload.label,
         status: String(payload.status),
         managerSummary: "",
@@ -140,33 +142,25 @@ export function useAdminIdeas() {
         links: [],
         bullets: [],
       });
-      setIdeas((prev) => [
-        ...prev,
-        prismaIdeaToIdeaItem(created as PrismaIdea),
-      ]);
+      await refetch();
     } catch {}
   };
 
   const renameIdeaLocal = async (id: string, label: string) => {
     const trimmed = label.trim();
     if (!trimmed) return;
-    setIdeas((prev) =>
-      prev.map((idea) => (idea.id === id ? { ...idea, label: trimmed } : idea)),
-    );
-    setSelected((prev) =>
-      prev && prev.id === id ? { ...prev, label: trimmed } : prev,
-    );
     try {
       await renameIdea.mutateAsync({ id, label: trimmed });
+      await refetch();
     } catch {}
   };
 
   const deleteIdeaLocal = async (id: string) => {
-    setIdeas((prev) => prev.filter((idea) => idea.id !== id));
-    setSelected((prev) => (prev && prev.id === id ? null : prev));
     try {
       await deleteIdea.mutateAsync({ id });
+      await refetch();
     } catch {}
+    setSelected((prev) => (prev && prev.id === id ? null : prev));
   };
 
   const addFolder = () => {
@@ -201,21 +195,6 @@ export function useAdminIdeas() {
         color: source.color,
       };
 
-      setIdeas((prevIdeas) => {
-        const ideasInFolder = prevIdeas.filter((idea) => idea.status === id);
-        if (ideasInFolder.length === 0) return prevIdeas;
-
-        const nextIdeas = [...prevIdeas];
-        ideasInFolder.forEach((idea) => {
-          nextIdeas.push({
-            ...idea,
-            id: `${idea.id}-copy-${newFolderId}`,
-            status: newFolderId,
-          });
-        });
-        return nextIdeas;
-      });
-
       return [...prevFolders, duplicateFolderConfig];
     });
   };
@@ -235,11 +214,7 @@ export function useAdminIdeas() {
       return nextFolders;
     });
 
-    setIdeas((prevIdeas) => prevIdeas.filter((idea) => idea.status !== id));
-
-    if (selected && selected.status === id) {
-      setSelected(null);
-    }
+    setSelected((prev) => (prev && prev.status === id ? null : prev));
   };
 
   const reorderFolders = (orderedIds: string[]) => {
@@ -263,30 +238,12 @@ export function useAdminIdeas() {
   };
 
   const reorderIdeas = (orderedIds: string[]) => {
-    setIdeas((prev) => {
-      const byId = new Map(prev.map((i) => [i.id, i]));
-      const currentStatus = activeStatus;
-      const inStatus = prev.filter((i) => i.status === currentStatus);
-      const others = prev.filter((i) => i.status !== currentStatus);
-
-      const orderedInStatus = orderedIds
-        .map((id) => byId.get(id))
-        .filter((idea): idea is AdminIdeaItem => idea !== undefined)
-        .filter((idea) => idea.status === currentStatus);
-
-      if (orderedInStatus.length !== inStatus.length) return prev;
-
-      return [...others, ...orderedInStatus];
-    });
+    const _ = orderedIds;
   };
 
   const moveIdeaToFolder = (ideaId: string, targetFolderId: string) => {
-    setIdeas((prev) =>
-      prev.map((idea) =>
-        idea.id === ideaId ? { ...idea, status: targetFolderId } : idea,
-      ),
-    );
-    if (selected?.id === ideaId) setSelected(null);
+    const _a = ideaId;
+    const _b = targetFolderId;
   };
 
   const updateDetails = async (payload: {
@@ -300,20 +257,6 @@ export function useAdminIdeas() {
     const safeLinks = payload.managerLinks ?? [];
     const safeBullets = payload.managerBullets ?? [];
 
-    setIdeas((prev) =>
-      prev.map((idea) =>
-        idea.id === payload.id
-          ? {
-              ...idea,
-              managerSummary: payload.managerSummary,
-              managerContent: payload.managerContent,
-              managerLinks: safeLinks,
-              managerBullets: safeBullets,
-              managerNote: payload.managerNote,
-            }
-          : idea,
-      ),
-    );
     try {
       await updateIdeaDetails.mutateAsync({
         id: payload.id,
@@ -330,23 +273,20 @@ export function useAdminIdeas() {
           text: b.text,
         })),
       });
+      await refetch();
     } catch {}
   };
 
   const setVisibility = async (payload: { id: string; isPublic: boolean }) => {
-    setIdeas((prev) =>
-      prev.map((idea) =>
-        idea.id === payload.id ? { ...idea, isPublic: payload.isPublic } : idea,
-      ),
-    );
+    try {
+      await setVisibilityMutation.mutateAsync(payload);
+      await refetch();
+    } catch {}
     setSelected((prev) =>
       prev && prev.id === payload.id
         ? { ...prev, isPublic: payload.isPublic }
         : prev,
     );
-    try {
-      await setVisibilityMutation.mutateAsync(payload);
-    } catch {}
   };
 
   const clearSelection = () => {
