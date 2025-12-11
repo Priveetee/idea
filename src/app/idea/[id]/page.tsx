@@ -165,7 +165,7 @@ export default function PublicIdeaPage() {
         </header>
 
         <main className="mb-4 rounded-3xl border border-zinc-900 bg-[#060010] shadow-[0_0_40px_rgba(0,0,0,0.5)]">
-          <div className="border-b border-zinc-900 px-8 pb-4 pt-5">
+          <div className="border-b border-zinc-900 px-8 pb-5 pt-6 space-y-3">
             <div className="mb-2 flex flex-wrap items-center gap-2 text-[11px] text-zinc-400">
               {tgiLabel && (
                 <span className="inline-flex items-center gap-2 rounded-full bg-zinc-900 px-3 py-1 font-mono text-[11px] text-indigo-300">
@@ -195,11 +195,11 @@ export default function PublicIdeaPage() {
             </h1>
 
             {links.length > 0 && (
-              <div className="mt-3 space-y-1 text-[12px] text-zinc-300">
+              <div className="mt-6 space-y-5 text-[12px] text-zinc-300">
                 <div className="text-[11px] uppercase tracking-[0.16em] text-zinc-500">
                   Références intéressantes
                 </div>
-                <ul className="space-y-0.5">
+                <ul className="space-y-3.5">
                   {links.map((link) => {
                     const Icon = getIconForUrl(link.url);
                     let host = "";
@@ -209,18 +209,25 @@ export default function PublicIdeaPage() {
                       host = link.url;
                     }
                     return (
-                      <li key={link.id} className="flex items-center gap-2">
-                        <div className="flex h-5 w-5 items-center justify-center rounded-md bg-zinc-900">
-                          <Icon className="h-3 w-3 text-zinc-200" />
-                        </div>
+                      <li key={link.id}>
                         <a
                           href={link.url}
                           target="_blank"
                           rel="noreferrer noopener"
-                          className="flex items-center gap-1 text-zinc-200 hover:underline"
+                          className="flex items-center gap-4 rounded-xl bg-zinc-950/70 px-5 py-2.5 hover:bg-zinc-900"
                         >
-                          <span>{link.label || host}</span>
-                          <ExternalIcon className="h-3 w-3 text-zinc-500" />
+                          <div className="flex h-8 w-8 items-center justify-center rounded-md bg-zinc-900">
+                            <Icon className="h-4 w-4 text-zinc-200" />
+                          </div>
+                          <div className="flex min-w-0 flex-col">
+                            <span className="truncate text-zinc-100 text-[13px]">
+                              {link.label || host}
+                            </span>
+                            <span className="truncate text-[11px] text-zinc-500">
+                              {host}
+                            </span>
+                          </div>
+                          <ExternalIcon className="ml-auto h-4 w-4 flex-shrink-0 text-zinc-500" />
                         </a>
                       </li>
                     );
