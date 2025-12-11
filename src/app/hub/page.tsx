@@ -13,6 +13,19 @@ type ReactionMap = Record<string, string[]>;
 type Comment = { id: string; text: string; createdAt: number };
 type CommentMap = Record<string, Comment[]>;
 
+type PublicIdea = {
+  id: string;
+  label: string;
+  status: string;
+  managerSummary: string | null;
+  managerContent: string | null;
+  managerNote: string | null;
+  links: { id: string; label: string; url: string }[];
+  bullets: { id: string; text: string }[];
+  reactions?: { emoji: string }[];
+  comments?: { id: string; text: string; createdAt: string | Date }[];
+};
+
 function createComment(text: string): Comment {
   return {
     id: `${Date.now()}-${Math.random().toString(16).slice(2)}`,
@@ -21,16 +34,35 @@ function createComment(text: string): Comment {
   };
 }
 
+function getBrowserFingerprint(): string {
+  if (typeof window === "undefined") return "server";
+  const key = "idea_fingerprint";
+  const existing =
+    typeof window !== "undefined" ? window.localStorage.getItem(key) : null;
+  if (existing) return existing;
+  const fp = `${Date.now()}-${Math.random().toString(16).slice(2)}`;
+  window.localStorage.setItem(key, fp);
+  return fp;
+}
+
 export default function HubPage() {
-  // Idées publiques uniquement
   const { data, isLoading } = trpc.idea.listPublic.useQuery();
 
-  const [reactions, setReactions] = useState<ReactionMap>({});
-  const [comments, setComments] = useState<CommentMap>({});
+  const utils = trpc.useUtils();
+  const addReactionMutation = trpc.idea.addReaction.useMutation();
+  const clearReactionsMutation = trpc.idea.clearReactionsForEmoji.useMutation();
+  const addCommentMutation = trpc.idea.addComment.useMutation();
+
+  const fingerprint = getBrowserFingerprint();
+
+  const ideasRaw: PublicIdea[] = useMemo(
+    () => (data ?? []) as PublicIdea[],
+    [data],
+  );
 
   const ideas: HubIdeaItem[] = useMemo(
     () =>
-      (data ?? []).map((idea) => ({
+      ideasRaw.map((idea) => ({
         id: idea.id,
         label: idea.label,
         status: idea.status,
@@ -47,8 +79,34 @@ export default function HubPage() {
         })),
         managerNote: idea.managerNote ?? "",
       })),
-    [data],
+    [ideasRaw],
   );
+
+  const initialReactions: ReactionMap = useMemo(() => {
+    const map: ReactionMap = {};
+    ideasRaw.forEach((idea) => {
+      const emojis: string[] = idea.reactions?.map((r) => r.emoji) ?? [];
+      map[idea.id] = emojis;
+    });
+    return map;
+  }, [ideasRaw]);
+
+  const initialComments: CommentMap = useMemo(() => {
+    const map: CommentMap = {};
+    ideasRaw.forEach((idea) => {
+      const cs: Comment[] =
+        idea.comments?.map((c) => ({
+          id: c.id,
+          text: c.text,
+          createdAt: new Date(c.createdAt).getTime(),
+        })) ?? [];
+      map[idea.id] = cs;
+    });
+    return map;
+  }, [ideasRaw]);
+
+  const [reactions, setReactions] = useState<ReactionMap>(initialReactions);
+  const [comments, setComments] = useState<CommentMap>(initialComments);
 
   const listItems: HubAnimatedListItem[] = useMemo(
     () =>
@@ -60,33 +118,62 @@ export default function HubPage() {
   );
 
   const handleToggleReaction = (ideaId: string, emoji: string) => {
+    const current = reactions[ideaId] ?? [];
+    const exists = current.includes(emoji);
+
     setReactions((prev) => {
-      const current = prev[ideaId] ?? [];
-      const exists = current.includes(emoji);
-
-      const nextReactions = exists
-        ? current.filter((e) => e !== emoji)
-        : [...current, emoji];
-
+      const now = prev[ideaId] ?? [];
+      const next = exists ? now.filter((e) => e !== emoji) : [...now, emoji];
       return {
         ...prev,
-        [ideaId]: nextReactions,
+        [ideaId]: next,
       };
     });
+
+    if (exists) {
+      clearReactionsMutation.mutate(
+        { ideaId, emoji, fingerprint },
+        {
+          onSuccess: () => {
+            void utils.idea.listPublic.invalidate();
+          },
+        },
+      );
+    } else {
+      addReactionMutation.mutate(
+        { ideaId, emoji, fingerprint },
+        {
+          onSuccess: () => {
+            void utils.idea.listPublic.invalidate();
+          },
+        },
+      );
+    }
   };
 
   const handleAddComment = (ideaId: string, text: string) => {
     const trimmed = text.trim();
     if (!trimmed) return;
 
+    const localComment = createComment(trimmed);
+
     setComments((prev) => {
       const current = prev[ideaId] ?? [];
-      const next = [...current, createComment(trimmed)];
+      const next = [...current, localComment];
       return {
         ...prev,
-        [ideaId]: next.slice(-5),
+        [ideaId]: next.slice(-20),
       };
     });
+
+    addCommentMutation.mutate(
+      { ideaId, text: trimmed, fingerprint },
+      {
+        onSuccess: () => {
+          void utils.idea.listPublic.invalidate();
+        },
+      },
+    );
   };
 
   return (

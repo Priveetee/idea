@@ -10,6 +10,8 @@ export const ideaRouter = router({
       include: {
         links: true,
         bullets: true,
+        reactions: true,
+        comments: true,
       },
     });
     return ideas;
@@ -27,6 +29,8 @@ export const ideaRouter = router({
         include: {
           links: true,
           bullets: true,
+          reactions: true,
+          comments: true,
         },
       });
       return idea;
@@ -55,6 +59,8 @@ export const ideaRouter = router({
         include: {
           links: true,
           bullets: true,
+          reactions: true,
+          comments: true,
         },
       });
       return idea;
@@ -184,19 +190,6 @@ export const ideaRouter = router({
       return idea;
     }),
 
-  delete: publicProcedure
-    .input(
-      z.object({
-        id: z.string(),
-      }),
-    )
-    .mutation(async ({ input }) => {
-      await prisma.idea.delete({
-        where: { id: input.id },
-      });
-      return { success: true };
-    }),
-
   moveToFolder: publicProcedure
     .input(
       z.object({
@@ -212,6 +205,19 @@ export const ideaRouter = router({
       return idea;
     }),
 
+  delete: publicProcedure
+    .input(
+      z.object({
+        id: z.string(),
+      }),
+    )
+    .mutation(async ({ input }) => {
+      await prisma.idea.delete({
+        where: { id: input.id },
+      });
+      return { success: true };
+    }),
+
   setVisibility: publicProcedure
     .input(
       z.object({
@@ -225,5 +231,61 @@ export const ideaRouter = router({
         data: { isPublic: input.isPublic },
       });
       return idea;
+    }),
+
+  addReaction: publicProcedure
+    .input(
+      z.object({
+        ideaId: z.string(),
+        emoji: z.string().min(1).max(10),
+        fingerprint: z.string().optional(),
+      }),
+    )
+    .mutation(async ({ input }) => {
+      const reaction = await prisma.ideaReaction.create({
+        data: {
+          ideaId: input.ideaId,
+          emoji: input.emoji,
+          fingerprint: input.fingerprint ?? null,
+        },
+      });
+      return reaction;
+    }),
+
+  clearReactionsForEmoji: publicProcedure
+    .input(
+      z.object({
+        ideaId: z.string(),
+        emoji: z.string().min(1).max(10),
+        fingerprint: z.string().optional(),
+      }),
+    )
+    .mutation(async ({ input }) => {
+      await prisma.ideaReaction.deleteMany({
+        where: {
+          ideaId: input.ideaId,
+          emoji: input.emoji,
+        },
+      });
+      return { success: true };
+    }),
+
+  addComment: publicProcedure
+    .input(
+      z.object({
+        ideaId: z.string(),
+        text: z.string().min(1).max(2000),
+        fingerprint: z.string().optional(),
+      }),
+    )
+    .mutation(async ({ input }) => {
+      const comment = await prisma.ideaComment.create({
+        data: {
+          ideaId: input.ideaId,
+          text: input.text,
+          fingerprint: input.fingerprint ?? null,
+        },
+      });
+      return comment;
     }),
 });
