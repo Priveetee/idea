@@ -12,6 +12,7 @@ import { AdminSidebar } from "./_components/admin-sidebar";
 import { AdminIdeaList } from "./_components/admin-idea-list";
 import { AdminIdeaPanel } from "./_components/admin-idea-panel";
 import { useAdminIdeas } from "./use-admin-ideas";
+import { useAdminConfig } from "./use-admin-config";
 
 export default function AdminPage() {
   const {
@@ -43,6 +44,8 @@ export default function AdminPage() {
     clearSelection,
     setVisibility,
   } = useAdminIdeas();
+
+  const { registrationsOpen, toggleRegistrations } = useAdminConfig();
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -130,6 +133,8 @@ export default function AdminPage() {
           inboxCount={inboxCount}
           devCount={devCount}
           archiveCount={archiveCount}
+          registrationsOpen={registrationsOpen}
+          toggleRegistrations={toggleRegistrations}
         />
 
         <DndContext sensors={sensors} onDragEnd={handleDragEnd}>

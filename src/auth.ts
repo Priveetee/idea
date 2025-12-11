@@ -16,4 +16,25 @@ export const auth = betterAuth({
   emailAndPassword: {
     enabled: true,
   },
+  databaseHooks: {
+    user: {
+      create: {
+        before: async (user) => {
+          const cfg =
+            (await prisma.appConfig.findUnique({ where: { id: "main" } })) ??
+            (await prisma.appConfig.create({
+              data: { id: "main", registrationsOpen: true },
+            }));
+
+          if (!cfg.registrationsOpen) {
+            throw new Error(
+              "Les inscriptions sont fermées. Contacte l'administrateur.",
+            );
+          }
+
+          return { data: user };
+        },
+      },
+    },
+  },
 });

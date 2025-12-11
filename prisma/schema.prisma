@@ -121,3 +121,8 @@ model IdeaComment {
   fingerprint String?
   createdAt   DateTime @default(now())
 }
+
+model AppConfig {
+  id                String  @id @default("main")
+  registrationsOpen Boolean @default(true)
+}
