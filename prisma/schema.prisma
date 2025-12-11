@@ -81,8 +81,10 @@ model Idea {
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
 
-  links   IdeaLink[]
-  bullets IdeaBullet[]
+  links     IdeaLink[]
+  bullets   IdeaBullet[]
+  reactions IdeaReaction[]
+  comments  IdeaComment[]
 }
 
 model IdeaLink {
@@ -100,4 +102,22 @@ model IdeaBullet {
   ideaId    String
   idea      Idea     @relation(fields: [ideaId], references: [id], onDelete: Cascade)
   createdAt DateTime @default(now())
+}
+
+model IdeaReaction {
+  id          String   @id @default(cuid())
+  ideaId      String
+  idea        Idea     @relation(fields: [ideaId], references: [id], onDelete: Cascade)
+  emoji       String
+  fingerprint String?
+  createdAt   DateTime @default(now())
+}
+
+model IdeaComment {
+  id          String   @id @default(cuid())
+  ideaId      String
+  idea        Idea     @relation(fields: [ideaId], references: [id], onDelete: Cascade)
+  text        String
+  fingerprint String?
+  createdAt   DateTime @default(now())
 }
