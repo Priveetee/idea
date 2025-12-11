@@ -1,10 +1,13 @@
 "use client";
 
 import { useRef, useState, type KeyboardEvent } from "react";
-import { useRouter } from "next/navigation";
-import { z } from "zod";
-import { trpc } from "@/lib/trpc";
 import { IdeaNewFormView } from "./idea-new-form-view";
+
+type IdeaLink = {
+  id: string;
+  label: string;
+  url: string;
+};
 
 export type IdeaNewFormPayload = {
   tgi: string;
@@ -16,24 +19,11 @@ export type IdeaNewFormPayload = {
   links: IdeaLink[];
 };
 
-type IdeaLink = {
-  id: string;
-  label: string;
-  url: string;
+type IdeaNewFormStateProps = {
+  onValidSubmit: (_payload: IdeaNewFormPayload) => void;
+  submitting: boolean;
+  externalError: string | null;
 };
-
-const ideaFormSchema = z.object({
-  tgi: z
-    .string()
-    .regex(/^T[0-9]{7}$/, "Format attendu : T + 7 chiffres, ex : T0000001"),
-  title: z.string().min(1, "Ajoutez au moins un titre à votre idée."),
-  description: z.string().optional(),
-  impact: z.enum(["faible", "moyen", "fort"]).optional(),
-  complexity: z.enum(["faible", "moyenne", "forte"]).optional(),
-  tag: z.string().optional(),
-});
-
-type IdeaFormValues = z.infer<typeof ideaFormSchema>;
 
 function generateLinkId(existing: IdeaLink[]): string {
   let i = existing.length + 1;
@@ -41,27 +31,11 @@ function generateLinkId(existing: IdeaLink[]): string {
   return String(i);
 }
 
-type IdeaNewFormStateProps = {
-  onValidSubmit: (_payload: IdeaNewFormPayload) => void;
-  submitting: boolean;
-  externalError: string | null;
-};
-
 export function IdeaNewFormState({
   onValidSubmit,
   submitting,
   externalError,
 }: IdeaNewFormStateProps) {
-  const router = useRouter();
-  const utils = trpc.useUtils();
-
-  const createIdea = trpc.idea.create.useMutation({
-    async onSuccess() {
-      await utils.idea.listPublic.invalidate();
-      router.push("/hub");
-    },
-  });
-
   const [tgi, setTgi] = useState("");
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
@@ -82,58 +56,51 @@ export function IdeaNewFormState({
 
   const titleRef = useRef<HTMLTextAreaElement | null>(null);
 
-  const submittingLocal = createIdea.isPending || submitting;
-
   const isTgiRoughlyValid = /^T[0-9]{7}$/.test(tgi.trim());
   const isTitleRoughlyValid = title.trim().length > 0;
   const isFormRoughlyValid = isTgiRoughlyValid && isTitleRoughlyValid;
 
-  const validate = (): IdeaFormValues | null => {
-    const formValues: IdeaFormValues = {
-      tgi: tgi.trim(),
-      title: title.trim(),
-      description: description.trim() || undefined,
-      impact: impact || undefined,
-      complexity: complexity || undefined,
-      tag: tag.trim() || undefined,
-    };
+  const validate = () => {
+    const trimmedTgi = tgi.trim();
+    const trimmedTitle = title.trim();
 
-    const result = ideaFormSchema.safeParse(formValues);
+    const nextFieldError: { tgi?: string; title?: string } = {};
 
-    if (!result.success) {
-      const issues = result.error.issues;
-      const byPath: { tgi?: string; title?: string } = {};
+    if (!/^T[0-9]{7}$/.test(trimmedTgi)) {
+      nextFieldError.tgi =
+        "Format attendu : T + 7 chiffres, ex : T0000001 (T majuscule).";
+    }
 
-      issues.forEach((issue) => {
-        const path = issue.path[0];
-        if (path === "tgi") byPath.tgi = issue.message;
-        if (path === "title") byPath.title = issue.message;
-      });
+    if (!trimmedTitle) {
+      nextFieldError.title =
+        "Ajoutez au moins un titre à votre idée (une phrase simple).";
+    }
 
-      setFieldError(byPath);
+    if (Object.keys(nextFieldError).length > 0) {
+      setFieldError(nextFieldError);
       setError(null);
       return null;
     }
 
     setFieldError({});
     setError(null);
-    return result.data;
-  };
-
-  const handleSubmit = () => {
-    const data = validate();
-    if (!data) return;
 
     const payload: IdeaNewFormPayload = {
-      tgi: data.tgi,
-      title: data.title,
-      description: data.description ?? undefined,
-      impact: data.impact ?? undefined,
-      complexity: data.complexity ?? undefined,
-      tag: data.tag ?? undefined,
+      tgi: trimmedTgi,
+      title: trimmedTitle,
+      description: description.trim() || undefined,
+      impact: impact || undefined,
+      complexity: complexity || undefined,
+      tag: tag.trim() || undefined,
       links,
     };
 
+    return payload;
+  };
+
+  const handleSubmit = () => {
+    const payload = validate();
+    if (!payload) return;
     onValidSubmit(payload);
   };
 
@@ -217,8 +184,8 @@ export function IdeaNewFormState({
       addLink={handleAddLink}
       removeLink={handleRemoveLink}
       fieldError={fieldError}
-      error={error ?? externalError ?? createIdea.error?.message ?? null}
-      submitting={submittingLocal}
+      error={error ?? externalError}
+      submitting={submitting}
       isFormRoughlyValid={isFormRoughlyValid}
       titleLength={titleLength}
       titleTooLong={titleTooLong}

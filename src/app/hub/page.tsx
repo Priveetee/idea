@@ -3,7 +3,7 @@
 import { useMemo, useState } from "react";
 import Link from "next/link";
 import { trpc } from "@/lib/trpc";
-import { HubIdeaCard } from "./_components/hub-idea-card";
+import { HubIdeaCard, type HubIdeaItem } from "./_components/hub-idea-card";
 import {
   HubAnimatedList,
   type HubAnimatedListItem,
@@ -27,7 +27,7 @@ export default function HubPage() {
   const [reactions, setReactions] = useState<ReactionMap>({});
   const [comments, setComments] = useState<CommentMap>({});
 
-  const ideas = useMemo(
+  const ideas: HubIdeaItem[] = useMemo(
     () =>
       (data ?? []).map((idea) => ({
         id: idea.id,
