@@ -105,8 +105,8 @@ export default function HubPage() {
     return map;
   }, [ideasRaw]);
 
-  const [reactions, setReactions] = useState<ReactionMap>(initialReactions);
-  const [comments, setComments] = useState<CommentMap>(initialComments);
+  const [reactions, setReactions] = useState<ReactionMap>({});
+  const [comments, setComments] = useState<CommentMap>({});
 
   const listItems: HubAnimatedListItem[] = useMemo(
     () =>
@@ -117,12 +117,24 @@ export default function HubPage() {
     [ideas],
   );
 
+  const getReactionsForIdea = (ideaId: string): string[] => {
+    const local = reactions[ideaId];
+    if (local) return local;
+    return initialReactions[ideaId] ?? [];
+  };
+
+  const getCommentsForIdea = (ideaId: string): Comment[] => {
+    const local = comments[ideaId];
+    if (local) return local;
+    return initialComments[ideaId] ?? [];
+  };
+
   const handleToggleReaction = (ideaId: string, emoji: string) => {
-    const current = reactions[ideaId] ?? [];
+    const current = getReactionsForIdea(ideaId);
     const exists = current.includes(emoji);
 
     setReactions((prev) => {
-      const now = prev[ideaId] ?? [];
+      const now = prev[ideaId] ?? current;
       const next = exists ? now.filter((e) => e !== emoji) : [...now, emoji];
       return {
         ...prev,
@@ -156,10 +168,11 @@ export default function HubPage() {
     if (!trimmed) return;
 
     const localComment = createComment(trimmed);
+    const base = getCommentsForIdea(ideaId);
 
     setComments((prev) => {
-      const current = prev[ideaId] ?? [];
-      const next = [...current, localComment];
+      const now = prev[ideaId] ?? base;
+      const next = [...now, localComment];
       return {
         ...prev,
         [ideaId]: next.slice(-20),
@@ -228,11 +241,11 @@ export default function HubPage() {
               showGradients={false}
               renderItem={(item) => {
                 const idea = ideas.find((i) => i.id === item.id)!;
-                const ideaComments = comments[idea.id] ?? [];
+                const ideaComments = getCommentsForIdea(idea.id);
                 return (
                   <HubIdeaCard
                     idea={idea}
-                    reactions={reactions[idea.id] ?? []}
+                    reactions={getReactionsForIdea(idea.id)}
                     comments={ideaComments}
                     onToggleReaction={(emoji) =>
                       handleToggleReaction(idea.id, emoji)
