@@ -1,4 +1,3 @@
-
 generator client {
   provider = "prisma-client"
   output   = "../generated/prisma"
@@ -69,4 +68,35 @@ model Verification {
 
   @@index([identifier])
   @@map("verification")
+}
+
+model Idea {
+  id             String   @id @default(cuid())
+  label          String
+  status         String
+  managerSummary String   @default("")
+  managerContent String   @default("")
+  managerNote    String   @default("")
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  links   IdeaLink[]
+  bullets IdeaBullet[]
+}
+
+model IdeaLink {
+  id        String   @id @default(cuid())
+  label     String
+  url       String
+  ideaId    String
+  idea      Idea     @relation(fields: [ideaId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+}
+
+model IdeaBullet {
+  id        String   @id @default(cuid())
+  text      String
+  ideaId    String
+  idea      Idea     @relation(fields: [ideaId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
 }

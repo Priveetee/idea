@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 import Link from "next/link";
-import { useIdeaStore } from "@/app/admin/_providers/idea-store";
+import { trpc } from "@/lib/trpc";
 import type { IdeaItem } from "@/lib/mock-data";
 import { HubIdeaCard } from "./_components/hub-idea-card";
 import {
@@ -23,9 +23,31 @@ function createComment(text: string): Comment {
 }
 
 export default function HubPage() {
-  const { ideas } = useIdeaStore();
+  const { data, isLoading } = trpc.idea.list.useQuery();
   const [reactions, setReactions] = useState<ReactionMap>({});
   const [comments, setComments] = useState<CommentMap>({});
+
+  const ideas: IdeaItem[] = useMemo(
+    () =>
+      (data ?? []).map((idea) => ({
+        id: idea.id,
+        label: idea.label,
+        status: idea.status,
+        managerSummary: idea.managerSummary,
+        managerContent: idea.managerContent,
+        managerLinks: idea.links?.map((l) => ({
+          id: l.id,
+          label: l.label,
+          url: l.url,
+        })),
+        managerBullets: idea.bullets?.map((b) => ({
+          id: b.id,
+          text: b.text,
+        })),
+        managerNote: idea.managerNote,
+      })),
+    [data],
+  );
 
   const listItems: HubAnimatedListItem[] = useMemo(
     () =>
@@ -97,7 +119,11 @@ export default function HubPage() {
         }}
       >
         <div className="mx-auto max-w-[2000px]">
-          {ideas.length === 0 ? (
+          {isLoading ? (
+            <div className="mt-20 text-center text-sm text-zinc-500">
+              Chargement des idées...
+            </div>
+          ) : ideas.length === 0 ? (
             <div className="mt-20 flex flex-col items-center justify-center gap-6 text-center">
               <div className="flex h-20 w-20 items-center justify-center rounded-3xl bg-zinc-900/50">
                 <span className="text-3xl">🌪️</span>
