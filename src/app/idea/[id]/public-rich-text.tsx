@@ -42,12 +42,20 @@ export function PublicRichText({ content }: PublicRichTextProps) {
   const segments: TextSegment[] = parseTextWithLinks(trimmed);
   const ExternalIcon = EXTERNAL_ICON;
 
+  // Heuristique simple pour décider si on affiche "Lire la suite"
+  const approxLength = trimmed.length;
+  const needsExpand = approxLength > 600 || segments.length > 8;
+
   return (
     <div className="space-y-3">
       <div
         className={`rounded-2xl bg-zinc-950/60 px-5 py-4 text-[13px] leading-relaxed text-zinc-200 ${
-          expanded ? "" : "max-h-48 overflow-hidden"
-        }`}
+          expanded ? "max-h-[480px]" : "max-h-[260px]"
+        } overflow-y-auto [&::-webkit-scrollbar]:w-[6px] [&::-webkit-scrollbar-thumb]:bg-zinc-800 [&::-webkit-scrollbar-thumb]:rounded-full`}
+        style={{
+          scrollbarWidth: "thin",
+          scrollbarColor: "#3f3f46 transparent",
+        }}
       >
         <p className="whitespace-pre-wrap">
           {segments.map((seg, idx) => {
@@ -91,15 +99,17 @@ export function PublicRichText({ content }: PublicRichTextProps) {
         </p>
       </div>
 
-      <div className="flex justify-end">
-        <button
-          type="button"
-          onClick={() => setExpanded((v) => !v)}
-          className="text-[11px] text-zinc-400 underline-offset-2 hover:text-zinc-200 hover:underline"
-        >
-          {expanded ? "Réduire" : "Lire la suite"}
-        </button>
-      </div>
+      {needsExpand && (
+        <div className="flex justify-end">
+          <button
+            type="button"
+            onClick={() => setExpanded((v) => !v)}
+            className="text-[11px] text-zinc-400 underline-offset-2 hover:text-zinc-200 hover:underline"
+          >
+            {expanded ? "Réduire" : "Lire la suite"}
+          </button>
+        </div>
+      )}
     </div>
   );
 }

@@ -229,10 +229,15 @@ export default function PublicIdeaPage() {
   };
 
   const links = idea.links;
-  const ExternalIcon = EXTERNAL_ICON;
 
   return (
-    <div className="min-h-screen bg-[#050509] text-white">
+    <div
+      className="min-h-screen bg-[#050509] text-white overflow-y-auto [&::-webkit-scrollbar]:w-[8px] [&::-webkit-scrollbar-track]:bg-[#050509] [&::-webkit-scrollbar-thumb]:bg-zinc-800 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb:hover]:bg-zinc-700"
+      style={{
+        scrollbarWidth: "thin",
+        scrollbarColor: "#3f3f46 #050509",
+      }}
+    >
       <div className="mx-auto flex min-h-screen max-w-5xl flex-col px-6 py-6">
         <header className="mb-4 flex items-center justify-between gap-4">
           <Link
@@ -314,7 +319,7 @@ export default function PublicIdeaPage() {
                               {host}
                             </span>
                           </div>
-                          <ExternalIcon className="ml-auto h-4 w-4 flex-shrink-0 text-zinc-500" />
+                          <EXTERNAL_ICON className="ml-auto h-4 w-4 flex-shrink-0 text-zinc-500" />
                         </a>
                       </li>
                     );

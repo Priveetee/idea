@@ -30,7 +30,13 @@ export function PublicComments({ comments }: PublicCommentsProps) {
   };
 
   return (
-    <div className="space-y-1">
+    <div
+      className="max-h-60 space-y-1 overflow-y-auto pr-1"
+      style={{
+        scrollbarWidth: "thin",
+        scrollbarColor: "#3f3f46 transparent",
+      }}
+    >
       {comments.map((c) => {
         const expanded = expandedIds[c.id] ?? false;
         const tooLong = c.text.length > MAX_LENGTH;
