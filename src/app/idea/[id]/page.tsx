@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, type KeyboardEvent } from "react";
+import { useMemo, useState, type KeyboardEvent } from "react";
 import Link from "next/link";
 import { notFound, useParams } from "next/navigation";
 import { trpc } from "@/lib/trpc";
@@ -22,6 +22,16 @@ type CommentMap = Record<string, PublicIdeaComment[]>;
 
 type StackedReaction = { value: string; count: number };
 
+type PublicIdeaDetail = {
+  id: string;
+  label: string;
+  status: string;
+  managerContent: string | null;
+  links: { id: string; label: string; url: string }[];
+  reactions?: { emoji: string }[];
+  comments?: { id: string; text: string; createdAt: string | Date }[];
+};
+
 function stackReactions(raw: string[]): StackedReaction[] {
   const map = new Map<string, number>();
   raw.forEach((r) => {
@@ -40,6 +50,17 @@ function createComment(text: string): PublicIdeaComment {
   };
 }
 
+function getBrowserFingerprint(): string {
+  if (typeof window === "undefined") return "server";
+  const key = "idea_fingerprint";
+  const existing =
+    typeof window !== "undefined" ? window.localStorage.getItem(key) : null;
+  if (existing) return existing;
+  const fp = `${Date.now()}-${Math.random().toString(16).slice(2)}`;
+  window.localStorage.setItem(key, fp);
+  return fp;
+}
+
 export default function PublicIdeaPage() {
   const params = useParams<{ id: string }>();
 
@@ -47,16 +68,45 @@ export default function PublicIdeaPage() {
     id: params.id,
   });
 
+  const utils = trpc.useUtils();
+  const addReactionMutation = trpc.idea.addReaction.useMutation();
+  const clearReactionsMutation = trpc.idea.clearReactionsForEmoji.useMutation();
+  const addCommentMutation = trpc.idea.addComment.useMutation();
+
+  const fingerprint = getBrowserFingerprint();
+
+  const idea: PublicIdeaDetail | null = useMemo(
+    () => (data ? (data as PublicIdeaDetail) : null),
+    [data],
+  );
+
+  const initialReactions: ReactionMap = useMemo(() => {
+    if (!idea) return {};
+    const emojis: string[] = idea.reactions?.map((r) => r.emoji) ?? [];
+    return { [idea.id]: emojis };
+  }, [idea]);
+
+  const initialComments: CommentMap = useMemo(() => {
+    if (!idea) return {};
+    const cs: PublicIdeaComment[] =
+      idea.comments?.map((c) => ({
+        id: c.id,
+        text: c.text,
+        createdAt: new Date(c.createdAt).getTime(),
+      })) ?? [];
+    return { [idea.id]: cs };
+  }, [idea]);
+
   const [reactions, setReactions] = useState<ReactionMap>({});
   const [comments, setComments] = useState<CommentMap>({});
   const [commentValue, setCommentValue] = useState("");
   const [copied, setCopied] = useState(false);
 
-  if (!isLoading && !data) {
+  if (!isLoading && !idea) {
     notFound();
   }
 
-  if (!data) {
+  if (!idea) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-[#050509] text-white">
         <div className="text-sm text-zinc-500">
@@ -66,42 +116,88 @@ export default function PublicIdeaPage() {
     );
   }
 
-  const label = data.label;
+  const getReactionsForIdea = (): string[] => {
+    const local = reactions[idea.id];
+    if (local) return local;
+    return initialReactions[idea.id] ?? [];
+  };
+
+  const getCommentsForIdea = (): PublicIdeaComment[] => {
+    const local = comments[idea.id];
+    if (local) return local;
+    return initialComments[idea.id] ?? [];
+  };
+
+  const label = idea.label;
   const end = label.indexOf("]");
   const tgiLabel = end === -1 ? null : label.slice(0, end + 1);
   const titleLabel = end === -1 ? label : label.slice(end + 1).trim();
+  const status = idea.status;
 
-  const ideaComments = comments[data.id] ?? [];
+  const ideaComments = getCommentsForIdea();
 
-  const list = reactions[data.id] ?? [];
+  const list = getReactionsForIdea();
   const stacked = stackReactions(list);
   const totalReactions = stacked.reduce((sum, r) => sum + r.count, 0);
 
   const handleToggleReaction = (emoji: string) => {
+    const current = getReactionsForIdea();
+    const exists = current.includes(emoji);
+
     setReactions((prev) => {
-      const current = prev[data.id] ?? [];
-      const exists = current.includes(emoji);
-      const nextReactions = exists
-        ? current.filter((e) => e !== emoji)
-        : [...current, emoji];
+      const now = prev[idea.id] ?? current;
+      const next = exists ? now.filter((e) => e !== emoji) : [...now, emoji];
       return {
         ...prev,
-        [data.id]: nextReactions,
+        [idea.id]: next,
       };
     });
+
+    if (exists) {
+      clearReactionsMutation.mutate(
+        { ideaId: idea.id, emoji, fingerprint },
+        {
+          onSuccess: () => {
+            void utils.idea.byIdPublic.invalidate({ id: idea.id });
+          },
+        },
+      );
+    } else {
+      addReactionMutation.mutate(
+        { ideaId: idea.id, emoji, fingerprint },
+        {
+          onSuccess: () => {
+            void utils.idea.byIdPublic.invalidate({ id: idea.id });
+          },
+        },
+      );
+    }
   };
 
   const handleAddComment = (text: string) => {
     const trimmed = text.trim();
     if (!trimmed) return;
+
+    const localComment = createComment(trimmed);
+    const base = getCommentsForIdea();
+
     setComments((prev) => {
-      const current = prev[data.id] ?? [];
-      const next = [...current, createComment(trimmed)];
+      const now = prev[idea.id] ?? base;
+      const next = [...now, localComment];
       return {
         ...prev,
-        [data.id]: next.slice(-20),
+        [idea.id]: next.slice(-20),
       };
     });
+
+    addCommentMutation.mutate(
+      { ideaId: idea.id, text: trimmed, fingerprint },
+      {
+        onSuccess: () => {
+          void utils.idea.byIdPublic.invalidate({ id: idea.id });
+        },
+      },
+    );
   };
 
   const handleCommentKeyDown = (e: KeyboardEvent<HTMLInputElement>) => {
@@ -122,7 +218,7 @@ export default function PublicIdeaPage() {
 
   const handleCopyLink = () => {
     const href =
-      typeof window !== "undefined" ? window.location.href : `/idea/${data.id}`;
+      typeof window !== "undefined" ? window.location.href : `/idea/${idea.id}`;
     navigator.clipboard
       .writeText(href)
       .then(() => {
@@ -132,7 +228,8 @@ export default function PublicIdeaPage() {
       .catch(() => {});
   };
 
-  const links = data.links;
+  const links = idea.links;
+  const ExternalIcon = EXTERNAL_ICON;
 
   return (
     <div className="min-h-screen bg-[#050509] text-white">
@@ -217,7 +314,7 @@ export default function PublicIdeaPage() {
                               {host}
                             </span>
                           </div>
-                          <EXTERNAL_ICON className="ml-auto h-4 w-4 flex-shrink-0 text-zinc-500" />
+                          <ExternalIcon className="ml-auto h-4 w-4 flex-shrink-0 text-zinc-500" />
                         </a>
                       </li>
                     );
@@ -229,7 +326,7 @@ export default function PublicIdeaPage() {
 
           <div className="px-8 pb-10 pt-5 space-y-9">
             <section>
-              <PublicRichText content={data.managerContent ?? ""} />
+              <PublicRichText content={idea.managerContent ?? ""} />
             </section>
 
             <section>
@@ -237,7 +334,7 @@ export default function PublicIdeaPage() {
                 Réactions
               </div>
               <PublicReactionsBar
-                stacked={stacked}
+                stacked={stackReactions(getReactionsForIdea())}
                 onToggleReaction={handleToggleReaction}
               />
             </section>
