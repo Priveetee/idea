@@ -169,8 +169,9 @@ export default function PublicIdeaPage() {
     );
   };
 
-  const handleCommentKeyDown = (e: KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === "Enter") {
+  const handleCommentKeyDown = (e: KeyboardEvent<HTMLTextAreaElement>) => {
+    if (e.key === "Enter" && !e.shiftKey) {
+      e.preventDefault();
       const value = commentValue.trim();
       if (!value) return;
       handleAddComment(value);
@@ -330,11 +331,11 @@ export default function PublicIdeaPage() {
                 <PublicComments comments={ideaComments} />
 
                 <div className="mt-3 border-t border-zinc-900 pt-3">
-                  <div className="relative flex.items-center">
-                    <input
-                      type="text"
+                  <div className="relative flex items-end">
+                    <textarea
+                      rows={1}
                       placeholder="Ajouter un commentaire public..."
-                      className="h-9 w-full rounded-xl border border-zinc-800 bg-zinc-900/40 pl-3 pr-9 text-[12px] text-zinc-200 placeholder-zinc-600 outline-none.transition focus:border-zinc-700 focus:bg-zinc-900"
+                      className="max-h-32 min-h-[36px] w-full resize-none rounded-xl border border-zinc-800 bg-zinc-900/40 px-3 pr-9 py-2 text-[12px] text-zinc-200 placeholder-zinc-600 outline-none transition focus:border-zinc-700 focus:bg-zinc-900"
                       value={commentValue}
                       onChange={(e) => setCommentValue(e.target.value)}
                       onKeyDown={handleCommentKeyDown}
@@ -342,7 +343,7 @@ export default function PublicIdeaPage() {
                     <button
                       type="button"
                       onClick={handleSendClick}
-                      className="absolute right-2 flex h-6 w-6.items-center justify-center rounded-lg text-zinc-600 transition hover:bg-zinc-100 hover:text-black"
+                      className="absolute right-2 bottom-2 flex h-6 w-6 items-center justify-center rounded-lg text-zinc-600 transition hover:bg-zinc-100 hover:text-black"
                     >
                       <RiSendPlaneFill className="h-3.5 w-3.5" />
                     </button>

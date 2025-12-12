@@ -87,16 +87,48 @@ function generateFolderId(existing: AdminFolderConfig[]): string {
   }
 }
 
+function isUnauthorizedError(err: unknown): boolean {
+  if (!err || typeof err !== "object") return false;
+
+  const e = err as {
+    message?: unknown;
+    data?: unknown;
+    shape?: unknown;
+  };
+
+  if (typeof e.message === "string" && e.message.includes("UNAUTHORIZED")) {
+    return true;
+  }
+
+  const data = e.data as { code?: unknown } | undefined;
+  if (data && typeof data.code === "string" && data.code === "UNAUTHORIZED") {
+    return true;
+  }
+
+  const shape = e.shape as { message?: unknown } | undefined;
+  if (
+    shape &&
+    typeof shape.message === "string" &&
+    shape.message.includes("UNAUTHORIZED")
+  ) {
+    return true;
+  }
+
+  return false;
+}
+
 export function useAdminIdeas() {
   const {
     data: folderData,
     isLoading: foldersLoading,
+    error: foldersError,
     refetch: refetchFolders,
   } = trpc.folder.list.useQuery();
 
   const {
     data: ideaData,
     isLoading: ideasLoading,
+    error: ideasError,
     refetch: refetchIdeas,
   } = trpc.idea.list.useQuery();
 
@@ -112,6 +144,21 @@ export function useAdminIdeas() {
   const updateFolderMutation = trpc.folder.update.useMutation();
   const deleteFolderMutation = trpc.folder.delete.useMutation();
   const reorderFoldersMutation = trpc.folder.reorder.useMutation();
+
+  const unauthorized =
+    isUnauthorizedError(ideasError) ||
+    isUnauthorizedError(foldersError) ||
+    isUnauthorizedError(createIdea.error) ||
+    isUnauthorizedError(renameIdea.error) ||
+    isUnauthorizedError(deleteIdea.error) ||
+    isUnauthorizedError(updateIdeaDetails.error) ||
+    isUnauthorizedError(setVisibilityMutation.error) ||
+    isUnauthorizedError(moveToFolderMutation.error) ||
+    isUnauthorizedError(createFolderMutation.error) ||
+    isUnauthorizedError(duplicateFolderMutation.error) ||
+    isUnauthorizedError(updateFolderMutation.error) ||
+    isUnauthorizedError(deleteFolderMutation.error) ||
+    isUnauthorizedError(reorderFoldersMutation.error);
 
   const isLoading = foldersLoading || ideasLoading;
 
@@ -147,6 +194,7 @@ export function useAdminIdeas() {
   };
 
   const selectIdea = (payload: { item: string; index: number }) => {
+    const _ = payload.item;
     const item = filteredIdeas[payload.index];
     if (!item) return;
     setSelected({
@@ -334,6 +382,7 @@ export function useAdminIdeas() {
 
   return {
     isLoading,
+    unauthorized,
     folders,
     ideas,
     activeStatus,

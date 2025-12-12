@@ -1,9 +1,9 @@
 import { z } from "zod";
-import { router, publicProcedure } from "../trpc";
+import { router, protectedProcedure } from "../trpc";
 import { prisma } from "@/lib/prisma";
 
 export const configRouter = router({
-  get: publicProcedure.query(async () => {
+  get: protectedProcedure.query(async () => {
     const cfg =
       (await prisma.appConfig.findUnique({ where: { id: "main" } })) ??
       (await prisma.appConfig.create({
@@ -12,7 +12,7 @@ export const configRouter = router({
     return cfg;
   }),
 
-  setRegistrationsOpen: publicProcedure
+  setRegistrationsOpen: protectedProcedure
     .input(
       z.object({
         open: z.boolean(),

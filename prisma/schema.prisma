@@ -109,7 +109,7 @@ model IdeaReaction {
   ideaId      String
   idea        Idea     @relation(fields: [ideaId], references: [id], onDelete: Cascade)
   emoji       String
-  fingerprint String?
+  fingerprint String
   createdAt   DateTime @default(now())
 
   @@unique([ideaId, emoji, fingerprint])

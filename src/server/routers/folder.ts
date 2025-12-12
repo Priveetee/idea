@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { router, publicProcedure } from "../trpc";
+import { router, publicProcedure, protectedProcedure } from "../trpc";
 import { prisma } from "@/lib/prisma";
 
 const SYSTEM_FOLDERS = [
@@ -37,7 +37,7 @@ export const folderRouter = router({
     return folders;
   }),
 
-  create: publicProcedure
+  create: protectedProcedure
     .input(
       z.object({
         id: z.string().min(1),
@@ -63,7 +63,7 @@ export const folderRouter = router({
       return folder;
     }),
 
-  duplicate: publicProcedure
+  duplicate: protectedProcedure
     .input(
       z.object({
         sourceId: z.string().min(1),
@@ -132,7 +132,7 @@ export const folderRouter = router({
       return { success: true, createdIdeas: ideas.length };
     }),
 
-  update: publicProcedure
+  update: protectedProcedure
     .input(
       z.object({
         id: z.string().min(1),
@@ -151,7 +151,7 @@ export const folderRouter = router({
       return folder;
     }),
 
-  delete: publicProcedure
+  delete: protectedProcedure
     .input(
       z.object({
         id: z.string().min(1),
@@ -174,7 +174,7 @@ export const folderRouter = router({
       return { success: true };
     }),
 
-  reorder: publicProcedure
+  reorder: protectedProcedure
     .input(
       z.object({
         orderedIds: z.array(z.string().min(1)),

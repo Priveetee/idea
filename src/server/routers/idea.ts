@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { router, publicProcedure } from "../trpc";
+import { router, publicProcedure, protectedProcedure } from "../trpc";
 import { prisma } from "@/lib/prisma";
 
 export const ideaRouter = router({
@@ -36,7 +36,7 @@ export const ideaRouter = router({
       return idea;
     }),
 
-  list: publicProcedure.query(async () => {
+  list: protectedProcedure.query(async () => {
     const ideas = await prisma.idea.findMany({
       orderBy: { createdAt: "desc" },
       include: {
@@ -47,7 +47,7 @@ export const ideaRouter = router({
     return ideas;
   }),
 
-  byId: publicProcedure
+  byId: protectedProcedure
     .input(
       z.object({
         id: z.string(),
@@ -66,7 +66,7 @@ export const ideaRouter = router({
       return idea;
     }),
 
-  create: publicProcedure
+  create: protectedProcedure
     .input(
       z.object({
         label: z.string().min(1),
@@ -124,7 +124,7 @@ export const ideaRouter = router({
       return idea;
     }),
 
-  rename: publicProcedure
+  rename: protectedProcedure
     .input(
       z.object({
         id: z.string(),
@@ -139,7 +139,7 @@ export const ideaRouter = router({
       return idea;
     }),
 
-  updateDetails: publicProcedure
+  updateDetails: protectedProcedure
     .input(
       z.object({
         id: z.string(),
@@ -190,7 +190,7 @@ export const ideaRouter = router({
       return idea;
     }),
 
-  moveToFolder: publicProcedure
+  moveToFolder: protectedProcedure
     .input(
       z.object({
         id: z.string(),
@@ -205,7 +205,7 @@ export const ideaRouter = router({
       return idea;
     }),
 
-  delete: publicProcedure
+  delete: protectedProcedure
     .input(
       z.object({
         id: z.string(),
@@ -218,7 +218,7 @@ export const ideaRouter = router({
       return { success: true };
     }),
 
-  setVisibility: publicProcedure
+  setVisibility: protectedProcedure
     .input(
       z.object({
         id: z.string(),

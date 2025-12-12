@@ -1,5 +1,7 @@
 "use client";
 
+import { useEffect, useMemo } from "react";
+import { useRouter } from "next/navigation";
 import {
   DndContext,
   type DragEndEvent,
@@ -13,10 +15,31 @@ import { AdminIdeaList } from "./_components/admin-idea-list";
 import { AdminIdeaPanel } from "./_components/admin-idea-panel";
 import { useAdminIdeas } from "./use-admin-ideas";
 import { useAdminConfig } from "./use-admin-config";
+import { authClient } from "@/lib/auth-client";
+
+function encodeNext(path: string): string {
+  return encodeURIComponent(path);
+}
 
 export default function AdminPage() {
+  const router = useRouter();
+
+  const sessionQuery = authClient.useSession();
+  const isSessionLoading = sessionQuery.isPending;
+  const session = sessionQuery.data ?? null;
+
+  const nextParam = useMemo(() => encodeNext("/admin"), []);
+
+  useEffect(() => {
+    if (isSessionLoading) return;
+    if (!session) {
+      router.replace(`/login?next=${nextParam}`);
+    }
+  }, [isSessionLoading, session, router, nextParam]);
+
   const {
     isLoading,
+    unauthorized,
     folders,
     ideas,
     activeStatus,
@@ -45,7 +68,18 @@ export default function AdminPage() {
     setVisibility,
   } = useAdminIdeas();
 
-  const { registrationsOpen, toggleRegistrations } = useAdminConfig();
+  const {
+    registrationsOpen,
+    toggleRegistrations,
+    unauthorized: configUnauthorized,
+  } = useAdminConfig();
+
+  useEffect(() => {
+    if (!session) return;
+    if (unauthorized || configUnauthorized) {
+      router.replace(`/login?next=${nextParam}`);
+    }
+  }, [session, unauthorized, configUnauthorized, router, nextParam]);
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -116,6 +150,14 @@ export default function AdminPage() {
       reorderIdeas(newOrder);
     }
   };
+
+  if (isSessionLoading || (!session && !isSessionLoading)) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-[#050509] text-white">
+        <div className="text-sm text-zinc-500">Authentification...</div>
+      </div>
+    );
+  }
 
   if (isLoading && ideas.length === 0) {
     return (
