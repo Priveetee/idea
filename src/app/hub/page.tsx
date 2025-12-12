@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo } from "react";
 import Link from "next/link";
 import { trpc } from "@/lib/trpc";
 import { HubIdeaCard, type HubIdeaItem } from "./_components/hub-idea-card";
@@ -32,14 +32,6 @@ type FolderRow = {
   position: number;
 };
 
-function createComment(text: string): Comment {
-  return {
-    id: `${Date.now()}-${Math.random().toString(16).slice(2)}`,
-    text,
-    createdAt: Date.now(),
-  };
-}
-
 function getBrowserFingerprint(): string {
   if (typeof window === "undefined") return "server";
   const key = "idea_fingerprint";
@@ -52,7 +44,7 @@ function getBrowserFingerprint(): string {
 
 export default function HubPage() {
   const { data, isLoading } = trpc.idea.listPublic.useQuery(undefined, {
-    refetchInterval: 1000,
+    refetchInterval: 5000,
     refetchIntervalInBackground: true,
   });
   const { data: folderData } = trpc.folder.list.useQuery();
@@ -143,8 +135,6 @@ export default function HubPage() {
     return map;
   }, [ideasRaw]);
 
-  const [commentOverrides, setCommentOverrides] = useState<CommentMap>({});
-
   const listItems: HubAnimatedListItem[] = useMemo(
     () =>
       ideas.map((idea) => ({
@@ -157,11 +147,8 @@ export default function HubPage() {
   const getReactionsForIdea = (ideaId: string): string[] =>
     reactionCounts[ideaId] ?? [];
 
-  const getCommentsForIdea = (ideaId: string): Comment[] => {
-    const local = commentOverrides[ideaId];
-    if (local) return local;
-    return initialComments[ideaId] ?? [];
-  };
+  const getCommentsForIdea = (ideaId: string): Comment[] =>
+    initialComments[ideaId] ?? [];
 
   const invalidate = () => {
     void utils.idea.listPublic.invalidate();
@@ -187,18 +174,6 @@ export default function HubPage() {
   const handleAddComment = (ideaId: string, text: string) => {
     const trimmed = text.trim();
     if (!trimmed) return;
-
-    const localComment = createComment(trimmed);
-    const base = getCommentsForIdea(ideaId);
-
-    setCommentOverrides((prev) => {
-      const now = prev[ideaId] ?? base;
-      const next = [...now, localComment];
-      return {
-        ...prev,
-        [ideaId]: next.slice(-20),
-      };
-    });
 
     addCommentMutation.mutate(
       { ideaId, text: trimmed, fingerprint },
