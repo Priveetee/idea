@@ -12,6 +12,65 @@ const schema = z.object({
   password: z.string().min(6),
 });
 
+function extractMessage(err: unknown): string | null {
+  if (!err || typeof err !== "object") return null;
+
+  const e = err as Record<string, unknown>;
+
+  const direct = e.message;
+  if (typeof direct === "string" && direct.trim()) return direct.trim();
+
+  const data = e.data;
+  if (data && typeof data === "object") {
+    const d = data as Record<string, unknown>;
+    const dm = d.message;
+    if (typeof dm === "string" && dm.trim()) return dm.trim();
+
+    const errors = d.errors;
+    if (Array.isArray(errors)) {
+      const first = errors[0];
+      if (first && typeof first === "object") {
+        const fm = (first as Record<string, unknown>).message;
+        if (typeof fm === "string" && fm.trim()) return fm.trim();
+      }
+    }
+  }
+
+  const cause = e.cause;
+  if (cause && typeof cause === "object") {
+    const c = cause as Record<string, unknown>;
+    const cm = c.message;
+    if (typeof cm === "string" && cm.trim()) return cm.trim();
+  }
+
+  return null;
+}
+
+function normalizeRegisterError(err: unknown): string {
+  const fallback = "Impossible de créer le compte.";
+
+  const msg = extractMessage(err) ?? "";
+  const lower = msg.toLowerCase();
+
+  if (
+    lower.includes("inscriptions") &&
+    (lower.includes("ferm") || lower.includes("closed"))
+  ) {
+    return "Les inscriptions sont fermées. Contacte l'administrateur.";
+  }
+
+  const status =
+    err && typeof err === "object"
+      ? (err as Record<string, unknown>).status
+      : undefined;
+
+  if (typeof status === "number" && status === 422) {
+    return "Les inscriptions sont fermées. Contacte l'administrateur.";
+  }
+
+  return msg || fallback;
+}
+
 export default function RegisterPage() {
   const router = useRouter();
   const { data: session } = authClient.useSession();
@@ -31,7 +90,7 @@ export default function RegisterPage() {
       setValues((prev) => ({ ...prev, [field]: e.target.value }));
     };
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
 
@@ -43,7 +102,7 @@ export default function RegisterPage() {
 
     setLoading(true);
 
-    const { error: signUpError } = await authClient.signUp.email(
+    authClient.signUp.email(
       {
         name: values.name,
         email: values.email,
@@ -60,14 +119,10 @@ export default function RegisterPage() {
         },
         onError(ctx) {
           setLoading(false);
-          setError(ctx.error.message || "Impossible de créer le compte.");
+          setError(normalizeRegisterError(ctx.error));
         },
       },
     );
-
-    if (signUpError) {
-      setLoading(false);
-    }
   };
 
   if (session) {
