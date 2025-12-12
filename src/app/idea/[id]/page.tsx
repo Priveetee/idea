@@ -10,8 +10,6 @@ import { PublicReactionsBar } from "./public-reactions-bar";
 import { PublicComments } from "./public-comments";
 import { PublicRichText } from "./public-rich-text";
 
-type ReactionMap = Record<string, string[]>;
-
 type PublicIdeaComment = {
   id: string;
   text: string;
@@ -20,17 +18,17 @@ type PublicIdeaComment = {
 
 type CommentMap = Record<string, PublicIdeaComment[]>;
 
-type StackedReaction = { value: string; count: number };
-
 type PublicIdeaDetail = {
   id: string;
   label: string;
   status: string;
   managerContent: string | null;
   links: { id: string; label: string; url: string }[];
-  reactions?: { emoji: string }[];
+  reactions?: { emoji: string; fingerprint: string }[];
   comments?: { id: string; text: string; createdAt: string | Date }[];
 };
+
+type StackedReaction = { value: string; count: number };
 
 function stackReactions(raw: string[]): StackedReaction[] {
   const map = new Map<string, number>();
@@ -66,7 +64,7 @@ export default function PublicIdeaPage() {
   const { data, isLoading } = trpc.idea.byIdPublic.useQuery(
     { id: params.id },
     {
-      refetchInterval: 1000,
+      refetchInterval: 5000,
       refetchIntervalInBackground: true,
     },
   );
@@ -83,12 +81,6 @@ export default function PublicIdeaPage() {
     [data],
   );
 
-  const initialReactions: ReactionMap = useMemo(() => {
-    if (!idea) return {};
-    const emojis: string[] = idea.reactions?.map((r) => r.emoji) ?? [];
-    return { [idea.id]: emojis };
-  }, [idea]);
-
   const initialComments: CommentMap = useMemo(() => {
     if (!idea) return {};
     const cs: PublicIdeaComment[] =
@@ -100,8 +92,7 @@ export default function PublicIdeaPage() {
     return { [idea.id]: cs };
   }, [idea]);
 
-  const [reactions, setReactions] = useState<ReactionMap>({});
-  const [comments, setComments] = useState<CommentMap>({});
+  const [commentsOverride, setCommentsOverride] = useState<CommentMap>({});
   const [commentValue, setCommentValue] = useState("");
   const [copied, setCopied] = useState(false);
 
@@ -119,60 +110,40 @@ export default function PublicIdeaPage() {
     );
   }
 
-  const getReactionsForIdea = (): string[] => {
-    const local = reactions[idea.id];
-    if (local) return local;
-    return initialReactions[idea.id] ?? [];
-  };
-
-  const getCommentsForIdea = (): PublicIdeaComment[] => {
-    const local = comments[idea.id];
-    if (local) return local;
-    return initialComments[idea.id] ?? [];
-  };
-
   const label = idea.label;
   const end = label.indexOf("]");
   const tgiLabel = end === -1 ? null : label.slice(0, end + 1);
   const titleLabel = end === -1 ? label : label.slice(end + 1).trim();
   const status = idea.status;
 
-  const ideaComments = getCommentsForIdea();
-
-  const list = getReactionsForIdea();
-  const stacked = stackReactions(list);
+  const dbReactions = (idea.reactions ?? []).map((r) => r.emoji);
+  const stacked = stackReactions(dbReactions);
   const totalReactions = stacked.reduce((sum, r) => sum + r.count, 0);
 
+  const baseComments = initialComments[idea.id] ?? [];
+  const ideaComments = commentsOverride[idea.id] ?? baseComments;
+
+  const invalidate = () => {
+    void utils.idea.byIdPublic.invalidate({ id: idea.id });
+  };
+
   const handleToggleReaction = (emoji: string) => {
-    const current = getReactionsForIdea();
-    const exists = current.includes(emoji);
+    const mine = new Set(
+      (idea.reactions ?? [])
+        .filter((r) => r.fingerprint === fingerprint)
+        .map((r) => r.emoji),
+    );
+    const iReacted = mine.has(emoji);
 
-    setReactions((prev) => {
-      const now = prev[idea.id] ?? current;
-      const next = exists ? now.filter((e) => e !== emoji) : [...now, emoji];
-      return {
-        ...prev,
-        [idea.id]: next,
-      };
-    });
-
-    if (exists) {
+    if (iReacted) {
       clearReactionsMutation.mutate(
         { ideaId: idea.id, emoji, fingerprint },
-        {
-          onSuccess: () => {
-            void utils.idea.byIdPublic.invalidate({ id: idea.id });
-          },
-        },
+        { onSuccess: invalidate },
       );
     } else {
       addReactionMutation.mutate(
         { ideaId: idea.id, emoji, fingerprint },
-        {
-          onSuccess: () => {
-            void utils.idea.byIdPublic.invalidate({ id: idea.id });
-          },
-        },
+        { onSuccess: invalidate },
       );
     }
   };
@@ -182,11 +153,10 @@ export default function PublicIdeaPage() {
     if (!trimmed) return;
 
     const localComment = createComment(trimmed);
-    const base = getCommentsForIdea();
 
-    setComments((prev) => {
-      const now = prev[idea.id] ?? base;
-      const next = [...now, localComment];
+    setCommentsOverride((prev) => {
+      const current = prev[idea.id] ?? baseComments;
+      const next = [...current, localComment];
       return {
         ...prev,
         [idea.id]: next.slice(-20),
@@ -195,11 +165,7 @@ export default function PublicIdeaPage() {
 
     addCommentMutation.mutate(
       { ideaId: idea.id, text: trimmed, fingerprint },
-      {
-        onSuccess: () => {
-          void utils.idea.byIdPublic.invalidate({ id: idea.id });
-        },
-      },
+      { onSuccess: invalidate },
     );
   };
 
@@ -248,7 +214,7 @@ export default function PublicIdeaPage() {
         }}
       >
         <div className="mx-auto flex min-h-full max-w-5xl flex-col">
-          <header className="mb-4 flex items-center justify-between gap-4">
+          <header className="mb-4 flex items.center justify-between gap-4">
             <Link
               href="/hub"
               className="inline-flex items-center gap-2 rounded-full border border-zinc-800 bg-zinc-950 px-3 py-1.5 text-[12px] text-zinc-300 transition hover:border-zinc-700 hover:bg-zinc-900"
@@ -274,7 +240,7 @@ export default function PublicIdeaPage() {
             <div className="border-b border-zinc-900 px-8 pb-5 pt-6 space-y-3">
               <div className="flex flex-wrap items-center gap-2 text-[11px] text-zinc-400">
                 {tgiLabel && (
-                  <span className="inline-flex items-center gap-2 rounded-full bg-zinc-900 px-3 py-1 font-mono text-[11px] text-indigo-300">
+                  <span className="inline-flex items-center gap-2 rounded.full bg-zinc-900 px-3 py-1 font-mono text-[11px] text-indigo-300">
                     <span className="h-1.5 w-1.5 rounded-full bg-indigo-400" />
                     {tgiLabel}
                   </span>
@@ -351,7 +317,7 @@ export default function PublicIdeaPage() {
                   Réactions
                 </div>
                 <PublicReactionsBar
-                  stacked={stackReactions(getReactionsForIdea())}
+                  stacked={stackReactions(dbReactions)}
                   onToggleReaction={handleToggleReaction}
                 />
               </section>
@@ -364,11 +330,11 @@ export default function PublicIdeaPage() {
                 <PublicComments comments={ideaComments} />
 
                 <div className="mt-3 border-t border-zinc-900 pt-3">
-                  <div className="relative flex items-center">
+                  <div className="relative flex.items-center">
                     <input
                       type="text"
                       placeholder="Ajouter un commentaire public..."
-                      className="h-9 w-full rounded-xl border border-zinc-800 bg-zinc-900/40 pl-3 pr-9 text-[12px] text-zinc-200 placeholder-zinc-600 outline-none transition focus:border-zinc-700 focus:bg-zinc-900"
+                      className="h-9 w-full rounded-xl border border-zinc-800 bg-zinc-900/40 pl-3 pr-9 text-[12px] text-zinc-200 placeholder-zinc-600 outline-none.transition focus:border-zinc-700 focus:bg-zinc-900"
                       value={commentValue}
                       onChange={(e) => setCommentValue(e.target.value)}
                       onKeyDown={handleCommentKeyDown}
@@ -376,7 +342,7 @@ export default function PublicIdeaPage() {
                     <button
                       type="button"
                       onClick={handleSendClick}
-                      className="absolute right-2 flex h-6 w-6 items-center justify-center rounded-lg text-zinc-600 transition hover:bg-zinc-100 hover:text-black"
+                      className="absolute right-2 flex h-6 w-6.items-center justify-center rounded-lg text-zinc-600 transition hover:bg-zinc-100 hover:text-black"
                     >
                       <RiSendPlaneFill className="h-3.5 w-3.5" />
                     </button>
