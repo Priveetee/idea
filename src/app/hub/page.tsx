@@ -9,7 +9,6 @@ import {
   type HubAnimatedListItem,
 } from "./_components/hub-animated-list";
 
-type ReactionMap = Record<string, string[]>;
 type Comment = { id: string; text: string; createdAt: number };
 type CommentMap = Record<string, Comment[]>;
 
@@ -52,7 +51,10 @@ function getBrowserFingerprint(): string {
 }
 
 export default function HubPage() {
-  const { data, isLoading } = trpc.idea.listPublic.useQuery();
+  const { data, isLoading } = trpc.idea.listPublic.useQuery(undefined, {
+    refetchInterval: 1000,
+    refetchIntervalInBackground: true,
+  });
   const { data: folderData } = trpc.folder.list.useQuery();
 
   const utils = trpc.useUtils();
@@ -105,8 +107,8 @@ export default function HubPage() {
     [ideasRaw, folderMetaById],
   );
 
-  const initialCounts: ReactionMap = useMemo(() => {
-    const map: ReactionMap = {};
+  const reactionCounts = useMemo(() => {
+    const map: Record<string, string[]> = {};
     ideasRaw.forEach((idea) => {
       const emojis: string[] = idea.reactions?.map((r) => r.emoji) ?? [];
       map[idea.id] = emojis;
@@ -141,7 +143,6 @@ export default function HubPage() {
     return map;
   }, [ideasRaw]);
 
-  const [reactionOverrides, setReactionOverrides] = useState<ReactionMap>({});
   const [commentOverrides, setCommentOverrides] = useState<CommentMap>({});
 
   const listItems: HubAnimatedListItem[] = useMemo(
@@ -153,11 +154,8 @@ export default function HubPage() {
     [ideas],
   );
 
-  const getReactionsForIdea = (ideaId: string): string[] => {
-    const local = reactionOverrides[ideaId];
-    if (local) return local;
-    return initialCounts[ideaId] ?? [];
-  };
+  const getReactionsForIdea = (ideaId: string): string[] =>
+    reactionCounts[ideaId] ?? [];
 
   const getCommentsForIdea = (ideaId: string): Comment[] => {
     const local = commentOverrides[ideaId];
@@ -172,17 +170,6 @@ export default function HubPage() {
   const handleToggleReaction = (ideaId: string, emoji: string) => {
     const mine = myReactionsByIdeaId.get(ideaId) ?? new Set<string>();
     const iReacted = mine.has(emoji);
-
-    setReactionOverrides((prev) => {
-      const base = prev[ideaId] ?? getReactionsForIdea(ideaId);
-      const next = iReacted
-        ? base.filter((e) => e !== emoji)
-        : [...base, emoji];
-      return {
-        ...prev,
-        [ideaId]: next,
-      };
-    });
 
     if (iReacted) {
       clearReactionsMutation.mutate(
