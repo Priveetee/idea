@@ -63,9 +63,13 @@ function getBrowserFingerprint(): string {
 export default function PublicIdeaPage() {
   const params = useParams<{ id: string }>();
 
-  const { data, isLoading } = trpc.idea.byIdPublic.useQuery({
-    id: params.id,
-  });
+  const { data, isLoading } = trpc.idea.byIdPublic.useQuery(
+    { id: params.id },
+    {
+      refetchInterval: 1000,
+      refetchIntervalInBackground: true,
+    },
+  );
 
   const utils = trpc.useUtils();
   const addReactionMutation = trpc.idea.addReaction.useMutation();
