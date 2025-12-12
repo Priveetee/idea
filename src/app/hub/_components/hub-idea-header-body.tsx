@@ -6,34 +6,10 @@ import { RichPreviewText } from "@/app/idea/new/_components/rich-preview-text";
 import { RiLinksLine, RiArrowRightUpLine } from "react-icons/ri";
 import type { HubIdeaItem } from "./hub-idea-card";
 
-const STATUS_CONFIG: Record<
-  string,
-  { label: string; bg: string; text: string; dot: string }
-> = {
-  INBOX: {
-    label: "Inbox",
-    bg: "bg-[#5227FF]/10",
-    text: "text-[#6b47ff]",
-    dot: "bg-[#6b47ff]",
-  },
-  DEV: {
-    label: "En cours",
-    bg: "bg-emerald-500/10",
-    text: "text-emerald-400",
-    dot: "bg-emerald-400",
-  },
-  ARCHIVE: {
-    label: "Archives",
-    bg: "bg-zinc-500/10",
-    text: "text-zinc-400",
-    dot: "bg-zinc-400",
-  },
-  DEFAULT: {
-    label: "Idée",
-    bg: "bg-zinc-500/10",
-    text: "text-zinc-400",
-    dot: "bg-zinc-400",
-  },
+const STATUS_LABEL: Record<string, string> = {
+  INBOX: "Inbox",
+  DEV: "En cours",
+  ARCHIVE: "Archives",
 };
 
 type HubIdeaHeaderBodyProps = {
@@ -57,7 +33,14 @@ export function HubIdeaHeaderBody({
     idea.status !== "ARCHIVE" &&
     idea.status !== "DEV";
 
-  const status = STATUS_CONFIG[idea.status] ?? STATUS_CONFIG.DEFAULT;
+  const statusLabel = STATUS_LABEL[idea.status] ?? "Idée";
+
+  const hasOriginColor =
+    idea.originColor !== undefined && idea.originColor !== null;
+
+  const dotColor = hasOriginColor ? idea.originColor : "#a1a1aa";
+  const statusTextColor = hasOriginColor ? idea.originColor : "#a1a1aa";
+
   const links = idea.managerLinks ?? [];
 
   return (
@@ -71,17 +54,25 @@ export function HubIdeaHeaderBody({
           )}
 
           <span
-            className={`inline-flex items-center gap-1.5 rounded-full px-2 py-0.5 text-[10px] font-semibold tracking-wide ${status.bg} ${status.text}`}
+            className="inline-flex items-center gap-1.5 rounded-full px-2 py-0.5 text-[10px] font-semibold tracking-wide"
+            style={{
+              backgroundColor: "rgba(255,255,255,0.06)",
+              color: statusTextColor,
+              border: "1px solid rgba(255,255,255,0.08)",
+            }}
           >
-            <span className={`h-1.5 w-1.5 rounded-full ${status.dot}`} />
-            {status.label}
+            <span
+              className="h-1.5 w-1.5 rounded-full"
+              style={{ backgroundColor: dotColor }}
+            />
+            {statusLabel}
           </span>
 
           {isCustomFolder && idea.originLabel && (
             <span
               className="inline-flex items-center rounded-full border border-white/10 px-2 py-0.5 text-[10px] font-medium text-white/90"
               style={{
-                backgroundColor: idea.originColor ?? "#27272a",
+                backgroundColor: hasOriginColor ? idea.originColor : "#27272a",
               }}
             >
               {idea.originLabel}
