@@ -13,7 +13,7 @@ import {
   FaLink,
   FaFacebook,
 } from "react-icons/fa6";
-import { FaTiktok, FaMediumM, FaBitbucket } from "react-icons/fa";
+import { FaTiktok, FaMediumM, FaBitbucket, FaJava } from "react-icons/fa";
 import { FaFirefoxBrowser, FaGitlab } from "react-icons/fa6";
 import {
   IoNewspaperSharp,
@@ -23,7 +23,6 @@ import {
 import { SiNewyorktimes, SiGitea, SiTypescript } from "react-icons/si";
 import { DiGo, DiApple, DiLinux } from "react-icons/di";
 import { CiInstagram } from "react-icons/ci";
-import { FaJava } from "react-icons/fa";
 import { GoLinkExternal } from "react-icons/go";
 
 type IconEntry = {
@@ -35,91 +34,42 @@ type IconEntry = {
 export const EXTERNAL_ICON = GoLinkExternal;
 
 const ICONS: IconEntry[] = [
-  {
-    hostIncludes: ["github.com"],
-    icon: FaGithub,
-    label: "GitHub",
-  },
-  {
-    hostIncludes: ["gitlab.com"],
-    icon: FaGitlab,
-    label: "GitLab",
-  },
-  {
-    hostIncludes: ["bitbucket.org"],
-    icon: FaBitbucket,
-    label: "Bitbucket",
-  },
-  {
-    hostIncludes: ["gitea.com", "gitea"],
-    icon: SiGitea,
-    label: "Gitea",
-  },
+  { hostIncludes: ["github.com"], icon: FaGithub, label: "GitHub" },
+  { hostIncludes: ["gitlab.com"], icon: FaGitlab, label: "GitLab" },
+  { hostIncludes: ["bitbucket.org"], icon: FaBitbucket, label: "Bitbucket" },
+  { hostIncludes: ["gitea.com", "gitea"], icon: SiGitea, label: "Gitea" },
+
   {
     hostIncludes: ["youtube.com", "youtu.be"],
     icon: FaYoutube,
     label: "YouTube",
   },
-  {
-    hostIncludes: ["tiktok.com"],
-    icon: FaTiktok,
-    label: "TikTok",
-  },
-  {
-    hostIncludes: ["figma.com"],
-    icon: FaFigma,
-    label: "Figma",
-  },
-  {
-    hostIncludes: ["x.com", "twitter.com"],
-    icon: FaXTwitter,
-    label: "X",
-  },
-  {
-    hostIncludes: ["instagram.com"],
-    icon: CiInstagram,
-    label: "Instagram",
-  },
-  {
-    hostIncludes: ["facebook.com"],
-    icon: FaFacebook,
-    label: "Facebook",
-  },
+  { hostIncludes: ["tiktok.com"], icon: FaTiktok, label: "TikTok" },
+
+  { hostIncludes: ["figma.com"], icon: FaFigma, label: "Figma" },
+
+  { hostIncludes: ["x.com", "twitter.com"], icon: FaXTwitter, label: "X" },
+  { hostIncludes: ["instagram.com"], icon: CiInstagram, label: "Instagram" },
+  { hostIncludes: ["facebook.com"], icon: FaFacebook, label: "Facebook" },
+
   {
     hostIncludes: ["discord.gg", "discord.com"],
     icon: FaDiscord,
     label: "Discord",
   },
-  {
-    hostIncludes: ["slack.com"],
-    icon: FaSlack,
-    label: "Slack",
-  },
+  { hostIncludes: ["slack.com"], icon: FaSlack, label: "Slack" },
+
   {
     hostIncludes: ["drive.google.com"],
     icon: FaGoogleDrive,
     label: "Google Drive",
   },
-  {
-    hostIncludes: ["dropbox.com"],
-    icon: FaDropbox,
-    label: "Dropbox",
-  },
-  {
-    hostIncludes: ["trello.com"],
-    icon: FaTrello,
-    label: "Trello",
-  },
-  {
-    hostIncludes: ["atlassian.net", "jira.com"],
-    icon: FaJira,
-    label: "Jira",
-  },
-  {
-    hostIncludes: ["medium.com"],
-    icon: FaMediumM,
-    label: "Medium",
-  },
+  { hostIncludes: ["dropbox.com"], icon: FaDropbox, label: "Dropbox" },
+
+  { hostIncludes: ["trello.com"], icon: FaTrello, label: "Trello" },
+  { hostIncludes: ["atlassian.net", "jira.com"], icon: FaJira, label: "Jira" },
+
+  { hostIncludes: ["medium.com"], icon: FaMediumM, label: "Medium" },
   {
     hostIncludes: ["nytimes.com", "newyorktimes.com"],
     icon: SiNewyorktimes,
@@ -130,16 +80,14 @@ const ICONS: IconEntry[] = [
     icon: IoNewspaperSharp,
     label: "Article de presse",
   },
+
   {
     hostIncludes: ["mozilla.org", "firefox.com"],
     icon: FaFirefoxBrowser,
     label: "Firefox",
   },
-  {
-    hostIncludes: ["golang.org", "go.dev"],
-    icon: DiGo,
-    label: "Go",
-  },
+
+  { hostIncludes: ["golang.org", "go.dev"], icon: DiGo, label: "Go" },
   {
     hostIncludes: ["javascript.info", "nodejs.org"],
     icon: IoLogoJavascript,
@@ -155,11 +103,8 @@ const ICONS: IconEntry[] = [
     icon: FaJava,
     label: "Java",
   },
-  {
-    hostIncludes: ["apple.com"],
-    icon: DiApple,
-    label: "Apple",
-  },
+
+  { hostIncludes: ["apple.com"], icon: DiApple, label: "Apple" },
   {
     hostIncludes: ["kernel.org", "linux.org", "ubuntu.com", "debian.org"],
     icon: DiLinux,

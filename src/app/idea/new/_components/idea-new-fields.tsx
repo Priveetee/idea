@@ -1,8 +1,13 @@
 "use client";
 
 import type { KeyboardEvent, RefObject } from "react";
-import type { IdeaLink } from "@/lib/mock-data";
 import { getLinkMeta } from "@/lib/link-icons";
+
+type IdeaLink = {
+  id: string;
+  label: string;
+  url: string;
+};
 
 type FieldErrors = {
   tgi?: string;

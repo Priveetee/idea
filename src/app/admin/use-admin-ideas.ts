@@ -1,19 +1,31 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import {
-  BASE_FOLDERS,
-  type FolderConfig,
-  type IdeaItem,
-  type IdeaStatus,
-} from "@/lib/mock-data";
 import { trpc } from "@/lib/trpc";
 
-type SelectedIdea = {
-  status: IdeaStatus | string;
-  index: number;
-  label: string;
+export type AdminIdeaStatus = string;
+
+export type AdminIdeaLink = { id: string; label: string; url: string };
+export type AdminIdeaBullet = { id: string; text: string };
+
+export type AdminIdeaItem = {
   id: string;
+  label: string;
+  status: AdminIdeaStatus;
+  managerSummary: string;
+  managerContent: string;
+  managerLinks: AdminIdeaLink[];
+  managerBullets: AdminIdeaBullet[];
+  managerNote: string;
+  isPublic: boolean;
+  createdAt: Date | string | number;
+};
+
+export type AdminFolderConfig = {
+  id: string;
+  label: string;
+  color: string;
+  position: number;
 };
 
 type PrismaIdea = {
@@ -23,11 +35,28 @@ type PrismaIdea = {
   managerSummary: string | null;
   managerContent: string | null;
   managerNote: string | null;
+  isPublic: boolean;
+  createdAt: string | Date;
   links: { id: string; label: string; url: string }[];
   bullets: { id: string; text: string }[];
 };
 
-function prismaIdeaToIdeaItem(db: PrismaIdea): IdeaItem {
+type SelectedIdea = {
+  status: AdminIdeaStatus;
+  index: number;
+  label: string;
+  id: string;
+  isPublic?: boolean;
+};
+
+type FolderRow = {
+  id: string;
+  label: string;
+  color: string;
+  position: number;
+};
+
+function prismaIdeaToIdeaItem(db: PrismaIdea): AdminIdeaItem {
   return {
     id: db.id,
     label: db.label,
@@ -44,10 +73,12 @@ function prismaIdeaToIdeaItem(db: PrismaIdea): IdeaItem {
       text: b.text,
     })),
     managerNote: db.managerNote ?? "",
+    isPublic: db.isPublic ?? false,
+    createdAt: db.createdAt,
   };
 }
 
-function generateFolderId(existing: FolderConfig[]): string {
+function generateFolderId(existing: AdminFolderConfig[]): string {
   let i = 1;
   while (true) {
     const candidate = `CUSTOM_${i}`;
@@ -56,20 +87,122 @@ function generateFolderId(existing: FolderConfig[]): string {
   }
 }
 
+function isUnauthorizedError(err: unknown): boolean {
+  if (!err || typeof err !== "object") return false;
+
+  const e = err as {
+    message?: unknown;
+    data?: unknown;
+    shape?: unknown;
+  };
+
+  if (typeof e.message === "string" && e.message.includes("UNAUTHORIZED")) {
+    return true;
+  }
+
+  const data = e.data as { code?: unknown } | undefined;
+  if (data && typeof data.code === "string" && data.code === "UNAUTHORIZED") {
+    return true;
+  }
+
+  const shape = e.shape as { message?: unknown } | undefined;
+  if (
+    shape &&
+    typeof shape.message === "string" &&
+    shape.message.includes("UNAUTHORIZED")
+  ) {
+    return true;
+  }
+
+  return false;
+}
+
 export function useAdminIdeas() {
-  const { data, isLoading } = trpc.idea.list.useQuery();
+  const utils = trpc.useUtils();
+
+  const {
+    data: folderData,
+    isLoading: foldersLoading,
+    error: foldersError,
+    refetch: refetchFolders,
+  } = trpc.folder.list.useQuery();
+
+  const {
+    data: ideaData,
+    isLoading: ideasLoading,
+    error: ideasError,
+    refetch: refetchIdeas,
+  } = trpc.idea.list.useQuery();
+
   const createIdea = trpc.idea.create.useMutation();
   const renameIdea = trpc.idea.rename.useMutation();
   const deleteIdea = trpc.idea.delete.useMutation();
   const updateIdeaDetails = trpc.idea.updateDetails.useMutation();
+  const setVisibilityMutation = trpc.idea.setVisibility.useMutation();
+  const moveToFolderMutation = trpc.idea.moveToFolder.useMutation();
 
-  const [folders, setFolders] = useState<FolderConfig[]>(BASE_FOLDERS);
-  const [ideas, setIdeas] = useState<IdeaItem[]>(
-    (data ?? []).map((d) => prismaIdeaToIdeaItem(d as PrismaIdea)),
+  const createFolderMutation = trpc.folder.create.useMutation();
+  const duplicateFolderMutation = trpc.folder.duplicate.useMutation();
+  const updateFolderMutation = trpc.folder.update.useMutation();
+  const deleteFolderMutation = trpc.folder.delete.useMutation();
+  const reorderFoldersMutation = trpc.folder.reorder.useMutation();
+
+  const unauthorized =
+    isUnauthorizedError(ideasError) ||
+    isUnauthorizedError(foldersError) ||
+    isUnauthorizedError(createIdea.error) ||
+    isUnauthorizedError(renameIdea.error) ||
+    isUnauthorizedError(deleteIdea.error) ||
+    isUnauthorizedError(updateIdeaDetails.error) ||
+    isUnauthorizedError(setVisibilityMutation.error) ||
+    isUnauthorizedError(moveToFolderMutation.error) ||
+    isUnauthorizedError(createFolderMutation.error) ||
+    isUnauthorizedError(duplicateFolderMutation.error) ||
+    isUnauthorizedError(updateFolderMutation.error) ||
+    isUnauthorizedError(deleteFolderMutation.error) ||
+    isUnauthorizedError(reorderFoldersMutation.error);
+
+  const isLoading = foldersLoading || ideasLoading;
+
+  const foldersFromDb: AdminFolderConfig[] = useMemo(
+    () =>
+      ((folderData ?? []) as FolderRow[])
+        .slice()
+        .sort((a, b) =>
+          a.position !== b.position
+            ? a.position - b.position
+            : a.id.localeCompare(b.id),
+        ),
+    [folderData],
   );
-  const [activeStatus, setActiveStatus] = useState<IdeaStatus | string>(
-    "INBOX",
+
+  const [folderOrderOverride, setFolderOrderOverride] = useState<
+    string[] | null
+  >(null);
+
+  const folders: AdminFolderConfig[] = useMemo(() => {
+    if (!folderOrderOverride) return foldersFromDb;
+
+    const byId = new Map(foldersFromDb.map((f) => [f.id, f]));
+    const ordered: AdminFolderConfig[] = [];
+    folderOrderOverride.forEach((id) => {
+      const f = byId.get(id);
+      if (f) ordered.push(f);
+    });
+
+    const remaining = foldersFromDb.filter(
+      (f) => !folderOrderOverride.includes(f.id),
+    );
+
+    return [...ordered, ...remaining];
+  }, [foldersFromDb, folderOrderOverride]);
+
+  const ideas: AdminIdeaItem[] = useMemo(
+    () => ((ideaData ?? []) as PrismaIdea[]).map(prismaIdeaToIdeaItem),
+    [ideaData],
   );
+
+  const [activeStatus, setActiveStatus] = useState<AdminIdeaStatus>("INBOX");
   const [selected, setSelected] = useState<SelectedIdea | null>(null);
 
   const filteredIdeas = useMemo(
@@ -82,7 +215,7 @@ export function useAdminIdeas() {
   const devCount = ideas.filter((i) => i.status === "DEV").length;
   const archiveCount = ideas.filter((i) => i.status === "ARCHIVE").length;
 
-  const changeStatus = (status: IdeaStatus | string) => {
+  const changeStatus = (status: AdminIdeaStatus) => {
     setActiveStatus(status);
     setSelected(null);
   };
@@ -95,15 +228,16 @@ export function useAdminIdeas() {
       index: payload.index,
       label: item.label,
       id: item.id,
+      isPublic: item.isPublic,
     });
   };
 
   const addIdea = async (payload: {
     label: string;
-    status: IdeaStatus | string;
+    status: AdminIdeaStatus;
   }) => {
     try {
-      const created = await createIdea.mutateAsync({
+      await createIdea.mutateAsync({
         label: payload.label,
         status: String(payload.status),
         managerSummary: "",
@@ -112,186 +246,132 @@ export function useAdminIdeas() {
         links: [],
         bullets: [],
       });
-      setIdeas((prev) => [
-        ...prev,
-        prismaIdeaToIdeaItem(created as PrismaIdea),
-      ]);
-    } catch {
-      // ignore
-    }
+      await refetchIdeas();
+    } catch {}
   };
 
   const renameIdeaLocal = async (id: string, label: string) => {
     const trimmed = label.trim();
     if (!trimmed) return;
-    setIdeas((prev) =>
-      prev.map((idea) => (idea.id === id ? { ...idea, label: trimmed } : idea)),
-    );
-    setSelected((prev) =>
-      prev && prev.id === id ? { ...prev, label: trimmed } : prev,
-    );
     try {
       await renameIdea.mutateAsync({ id, label: trimmed });
-    } catch {
-      // ignore
-    }
+      await refetchIdeas();
+    } catch {}
   };
 
   const deleteIdeaLocal = async (id: string) => {
-    setIdeas((prev) => prev.filter((idea) => idea.id !== id));
-    setSelected((prev) => (prev && prev.id === id ? null : prev));
     try {
       await deleteIdea.mutateAsync({ id });
-    } catch {
-      // ignore
-    }
+      await refetchIdeas();
+    } catch {}
+    setSelected((prev) => (prev && prev.id === id ? null : prev));
   };
 
-  const addFolder = () => {
+  const addFolder = async () => {
     const newId = generateFolderId(folders);
-    const folder: FolderConfig = {
-      id: newId,
-      label: `Espace ${folders.length + 1}`,
-      color: "#22c55e",
-    };
-    setFolders((prev) => [...prev, folder]);
-    setActiveStatus(newId);
-    setSelected(null);
-  };
-
-  const renameFolder = (id: string, label: string) => {
-    setFolders((prev) => prev.map((f) => (f.id === id ? { ...f, label } : f)));
-  };
-
-  const changeFolderColor = (id: string, color: string) => {
-    setFolders((prev) => prev.map((f) => (f.id === id ? { ...f, color } : f)));
-  };
-
-  const duplicateFolder = (id: string) => {
-    setFolders((prevFolders) => {
-      const source = prevFolders.find((f) => f.id === id);
-      if (!source) return prevFolders;
-
-      const newFolderId = generateFolderId(prevFolders);
-      const duplicateFolderConfig: FolderConfig = {
-        id: newFolderId,
-        label: `${source.label} (copie)`,
-        color: source.color,
-      };
-
-      setIdeas((prevIdeas) => {
-        const ideasInFolder = prevIdeas.filter((idea) => idea.status === id);
-        if (ideasInFolder.length === 0) return prevIdeas;
-
-        const nextIdeas = [...prevIdeas];
-        ideasInFolder.forEach((idea) => {
-          nextIdeas.push({
-            ...idea,
-            id: `${idea.id}-copy-${newFolderId}`,
-            status: newFolderId,
-          });
-        });
-        return nextIdeas;
+    try {
+      await createFolderMutation.mutateAsync({
+        id: newId,
+        label: `Espace ${folders.length + 1}`,
+        color: "#22c55e",
       });
-
-      return [...prevFolders, duplicateFolderConfig];
-    });
+      await refetchFolders();
+      setActiveStatus(newId);
+      setSelected(null);
+    } catch {}
   };
 
-  const deleteFolder = (id: string) => {
-    if (id === "INBOX" || id === "DEV" || id === "ARCHIVE") return;
+  const renameFolder = async (id: string, label: string) => {
+    const trimmed = label.trim();
+    if (!trimmed) return;
+    try {
+      await updateFolderMutation.mutateAsync({ id, label: trimmed });
+      await refetchFolders();
+    } catch {}
+  };
 
-    setFolders((prevFolders) => {
-      const nextFolders = prevFolders.filter((f) => f.id !== id);
-      if (nextFolders.length === 0) {
-        setActiveStatus("INBOX");
-      } else if (activeStatus === id) {
-        const fallback =
-          nextFolders.find((f) => f.id === "INBOX") ?? nextFolders[0];
-        setActiveStatus(fallback.id);
-      }
-      return nextFolders;
-    });
+  const changeFolderColor = async (id: string, color: string) => {
+    try {
+      await updateFolderMutation.mutateAsync({ id, color });
+      await refetchFolders();
+    } catch {}
+  };
 
-    setIdeas((prevIdeas) => prevIdeas.filter((idea) => idea.status !== id));
+  const duplicateFolder = async (id: string) => {
+    const source = folders.find((f) => f.id === id);
+    if (!source) return;
 
-    if (selected && selected.status === id) {
-      setSelected(null);
+    const newId = generateFolderId(folders);
+    const newLabel = `${source.label} (copie)`;
+
+    try {
+      await duplicateFolderMutation.mutateAsync({
+        sourceId: id,
+        newId,
+        newLabel,
+      });
+      await Promise.all([refetchFolders(), refetchIdeas()]);
+    } catch {}
+  };
+
+  const deleteFolder = async (id: string) => {
+    if (id === "INBOX" || id === "ARCHIVE") return;
+
+    try {
+      await deleteFolderMutation.mutateAsync({ id });
+      await Promise.all([refetchFolders(), refetchIdeas()]);
+    } catch {}
+
+    setSelected((prev) => (prev && prev.status === id ? null : prev));
+
+    if (activeStatus === id) {
+      setActiveStatus("INBOX");
     }
   };
 
-  const reorderFolders = (orderedIds: string[]) => {
-    setFolders((prev) => {
-      const byId = new Map(prev.map((f) => [f.id, f]));
-      const next: FolderConfig[] = [];
+  const reorderFolders = async (orderedIds: string[]) => {
+    setFolderOrderOverride(orderedIds);
 
-      orderedIds.forEach((id) => {
-        const folder = byId.get(id);
-        if (folder) next.push(folder);
-      });
+    try {
+      await reorderFoldersMutation.mutateAsync({ orderedIds });
+      void utils.folder.list.invalidate();
+    } catch {
+      setFolderOrderOverride(null);
+      return;
+    }
 
-      prev.forEach((folder) => {
-        if (!orderedIds.includes(folder.id)) {
-          next.push(folder);
-        }
-      });
-
-      return next;
-    });
+    setTimeout(() => {
+      setFolderOrderOverride(null);
+    }, 800);
   };
 
-  const reorderIdeas = (orderedIds: string[]) => {
-    setIdeas((prev) => {
-      const byId = new Map(prev.map((i) => [i.id, i]));
-      const currentStatus = activeStatus;
-      const inStatus = prev.filter((i) => i.status === currentStatus);
-      const others = prev.filter((i) => i.status !== currentStatus);
+  const reorderIdeas = (_orderedIds: string[]) => {};
 
-      const orderedInStatus = orderedIds
-        .map((id) => byId.get(id))
-        .filter((idea): idea is IdeaItem => idea !== undefined)
-        .filter((idea) => idea.status === currentStatus);
+  const moveIdeaToFolder = async (ideaId: string, targetFolderId: string) => {
+    try {
+      await moveToFolderMutation.mutateAsync({
+        id: ideaId,
+        status: targetFolderId,
+      });
+      await refetchIdeas();
+    } catch {}
 
-      if (orderedInStatus.length !== inStatus.length) return prev;
-
-      return [...others, ...orderedInStatus];
-    });
-  };
-
-  const moveIdeaToFolder = (ideaId: string, targetFolderId: string) => {
-    setIdeas((prev) =>
-      prev.map((idea) =>
-        idea.id === ideaId ? { ...idea, status: targetFolderId } : idea,
-      ),
+    setSelected((prev) =>
+      prev && prev.id === ideaId ? { ...prev, status: targetFolderId } : prev,
     );
-    if (selected?.id === ideaId) setSelected(null);
   };
 
   const updateDetails = async (payload: {
     id: string;
     managerSummary: string;
     managerContent: string;
-    managerLinks: IdeaItem["managerLinks"] | undefined;
-    managerBullets: IdeaItem["managerBullets"] | undefined;
+    managerLinks: AdminIdeaLink[] | undefined;
+    managerBullets: AdminIdeaBullet[] | undefined;
     managerNote: string;
   }) => {
     const safeLinks = payload.managerLinks ?? [];
     const safeBullets = payload.managerBullets ?? [];
 
-    setIdeas((prev) =>
-      prev.map((idea) =>
-        idea.id === payload.id
-          ? {
-              ...idea,
-              managerSummary: payload.managerSummary,
-              managerContent: payload.managerContent,
-              managerLinks: safeLinks,
-              managerBullets: safeBullets,
-              managerNote: payload.managerNote,
-            }
-          : idea,
-      ),
-    );
     try {
       await updateIdeaDetails.mutateAsync({
         id: payload.id,
@@ -308,9 +388,20 @@ export function useAdminIdeas() {
           text: b.text,
         })),
       });
-    } catch {
-      // ignore
-    }
+      await refetchIdeas();
+    } catch {}
+  };
+
+  const setVisibility = async (payload: { id: string; isPublic: boolean }) => {
+    try {
+      await setVisibilityMutation.mutateAsync(payload);
+      await refetchIdeas();
+    } catch {}
+    setSelected((prev) =>
+      prev && prev.id === payload.id
+        ? { ...prev, isPublic: payload.isPublic }
+        : prev,
+    );
   };
 
   const clearSelection = () => {
@@ -324,6 +415,7 @@ export function useAdminIdeas() {
 
   return {
     isLoading,
+    unauthorized,
     folders,
     ideas,
     activeStatus,
@@ -349,5 +441,6 @@ export function useAdminIdeas() {
     moveIdeaToFolder,
     updateDetails,
     clearSelection,
+    setVisibility,
   };
 }

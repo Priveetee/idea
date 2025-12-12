@@ -1,9 +1,42 @@
 import { z } from "zod";
-import { router, publicProcedure } from "../trpc";
+import { router, publicProcedure, protectedProcedure } from "../trpc";
 import { prisma } from "@/lib/prisma";
 
 export const ideaRouter = router({
-  list: publicProcedure.query(async () => {
+  listPublic: publicProcedure.query(async () => {
+    const ideas = await prisma.idea.findMany({
+      where: { isPublic: true },
+      orderBy: { createdAt: "desc" },
+      include: {
+        links: true,
+        bullets: true,
+        reactions: true,
+        comments: true,
+      },
+    });
+    return ideas;
+  }),
+
+  byIdPublic: publicProcedure
+    .input(
+      z.object({
+        id: z.string(),
+      }),
+    )
+    .query(async ({ input }) => {
+      const idea = await prisma.idea.findFirst({
+        where: { id: input.id, isPublic: true },
+        include: {
+          links: true,
+          bullets: true,
+          reactions: true,
+          comments: true,
+        },
+      });
+      return idea;
+    }),
+
+  list: protectedProcedure.query(async () => {
     const ideas = await prisma.idea.findMany({
       orderBy: { createdAt: "desc" },
       include: {
@@ -14,7 +47,7 @@ export const ideaRouter = router({
     return ideas;
   }),
 
-  byId: publicProcedure
+  byId: protectedProcedure
     .input(
       z.object({
         id: z.string(),
@@ -26,12 +59,14 @@ export const ideaRouter = router({
         include: {
           links: true,
           bullets: true,
+          reactions: true,
+          comments: true,
         },
       });
       return idea;
     }),
 
-  create: publicProcedure
+  create: protectedProcedure
     .input(
       z.object({
         label: z.string().min(1),
@@ -64,6 +99,7 @@ export const ideaRouter = router({
           managerSummary: input.managerSummary ?? "",
           managerContent: input.managerContent ?? "",
           managerNote: input.managerNote ?? "",
+          isPublic: false,
           links: input.links
             ? {
                 create: input.links.map((l) => ({
@@ -88,7 +124,7 @@ export const ideaRouter = router({
       return idea;
     }),
 
-  rename: publicProcedure
+  rename: protectedProcedure
     .input(
       z.object({
         id: z.string(),
@@ -103,7 +139,7 @@ export const ideaRouter = router({
       return idea;
     }),
 
-  updateDetails: publicProcedure
+  updateDetails: protectedProcedure
     .input(
       z.object({
         id: z.string(),
@@ -154,7 +190,27 @@ export const ideaRouter = router({
       return idea;
     }),
 
-  delete: publicProcedure
+  moveToFolder: protectedProcedure
+    .input(
+      z.object({
+        id: z.string(),
+        status: z.string().min(1),
+      }),
+    )
+    .mutation(async ({ input }) => {
+      const status = input.status.trim();
+      if (!status || status.startsWith("sort-")) {
+        throw new Error("INVALID_STATUS");
+      }
+
+      const idea = await prisma.idea.update({
+        where: { id: input.id },
+        data: { status },
+      });
+      return idea;
+    }),
+
+  delete: protectedProcedure
     .input(
       z.object({
         id: z.string(),
@@ -165,5 +221,87 @@ export const ideaRouter = router({
         where: { id: input.id },
       });
       return { success: true };
+    }),
+
+  setVisibility: protectedProcedure
+    .input(
+      z.object({
+        id: z.string(),
+        isPublic: z.boolean(),
+      }),
+    )
+    .mutation(async ({ input }) => {
+      const idea = await prisma.idea.update({
+        where: { id: input.id },
+        data: { isPublic: input.isPublic },
+      });
+      return idea;
+    }),
+
+  addReaction: publicProcedure
+    .input(
+      z.object({
+        ideaId: z.string(),
+        emoji: z.string().min(1).max(10),
+        fingerprint: z.string().min(1),
+      }),
+    )
+    .mutation(async ({ input }) => {
+      const reaction = await prisma.ideaReaction.upsert({
+        where: {
+          ideaId_emoji_fingerprint: {
+            ideaId: input.ideaId,
+            emoji: input.emoji,
+            fingerprint: input.fingerprint,
+          },
+        },
+        update: {},
+        create: {
+          ideaId: input.ideaId,
+          emoji: input.emoji,
+          fingerprint: input.fingerprint,
+        },
+      });
+
+      return reaction;
+    }),
+
+  clearReactionsForEmoji: publicProcedure
+    .input(
+      z.object({
+        ideaId: z.string(),
+        emoji: z.string().min(1).max(10),
+        fingerprint: z.string().min(1),
+      }),
+    )
+    .mutation(async ({ input }) => {
+      await prisma.ideaReaction.deleteMany({
+        where: {
+          ideaId: input.ideaId,
+          emoji: input.emoji,
+          fingerprint: input.fingerprint,
+        },
+      });
+
+      return { success: true };
+    }),
+
+  addComment: publicProcedure
+    .input(
+      z.object({
+        ideaId: z.string(),
+        text: z.string().min(1).max(2000),
+        fingerprint: z.string().optional(),
+      }),
+    )
+    .mutation(async ({ input }) => {
+      const comment = await prisma.ideaComment.create({
+        data: {
+          ideaId: input.ideaId,
+          text: input.text,
+          fingerprint: input.fingerprint ?? null,
+        },
+      });
+      return comment;
     }),
 });

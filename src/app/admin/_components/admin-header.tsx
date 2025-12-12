@@ -5,6 +5,8 @@ type AdminHeaderProps = {
   inboxCount: number;
   devCount: number;
   archiveCount: number;
+  registrationsOpen: boolean;
+  toggleRegistrations: () => void;
 };
 
 export function AdminHeader({
@@ -12,38 +14,42 @@ export function AdminHeader({
   inboxCount,
   devCount,
   archiveCount,
+  registrationsOpen,
+  toggleRegistrations,
 }: AdminHeaderProps) {
   return (
-    <header className="mb-10 flex items-end justify-between">
+    <header className="flex items-center justify-between border-b border-zinc-900 pb-4 text-sm text-zinc-200">
       <div>
-        <h1 className="text-4xl font-semibold tracking-tight">
-          Idea
-          <span className="text-[#5227FF]">.admin</span>
-        </h1>
-        <p className="mt-2 text-sm text-zinc-500">
-          Vue manager · Tri et qualification des idées issues des liens TGI
-        </p>
-      </div>
-      <div className="flex items-center gap-6">
-        <div className="text-right text-xs text-zinc-500">
-          <div>
-            Total idées:{" "}
-            <span className="font-semibold text-zinc-200">{totalIdeas}</span>
-          </div>
-          <div className="mt-0.5">
-            Inbox:{" "}
-            <span className="font-semibold text-zinc-200">{inboxCount}</span> ·
-            Dev:{" "}
-            <span className="font-semibold text-emerald-400">{devCount}</span> ·
-            Archives:{" "}
-            <span className="font-semibold text-zinc-400">{archiveCount}</span>
-          </div>
+        <div className="text-xs uppercase tracking-[0.2em] text-zinc-500">
+          Idea.admin
         </div>
+        <div className="mt-1 text-lg font-semibold text-zinc-50">
+          Vue manager
+        </div>
+        <div className="mt-1 text-[11px] text-zinc-500">
+          Total: {totalIdeas} · Inbox: {inboxCount} · Dev: {devCount} ·
+          Archives: {archiveCount}
+        </div>
+      </div>
+
+      <div className="flex items-center gap-3 text-[11px]">
+        <span
+          className={
+            registrationsOpen
+              ? "rounded-full bg-emerald-950/50 px-3 py-1 text-emerald-300"
+              : "rounded-full bg-zinc-900 px-3 py-1 text-zinc-400"
+          }
+        >
+          Inscriptions {registrationsOpen ? "ouvertes" : "fermées"}
+        </span>
         <button
           type="button"
-          className="rounded-full border border-zinc-700 bg-zinc-900 px-4 py-2 text-sm text-zinc-200 transition hover:bg-zinc-800"
+          onClick={toggleRegistrations}
+          className="rounded-full border border-zinc-700 bg-zinc-900 px-3 py-1 text-[11px] text-zinc-200 hover:border-zinc-500 hover:bg-zinc-800"
         >
-          Rafraîchir le flux
+          {registrationsOpen
+            ? "Fermer les inscriptions"
+            : "Ouvrir les inscriptions"}
         </button>
       </div>
     </header>

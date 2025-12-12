@@ -5,15 +5,19 @@ import {
   SortableContext,
   verticalListSortingStrategy,
 } from "@dnd-kit/sortable";
-import type { IdeaStatus, IdeaItem, FolderConfig } from "@/lib/mock-data";
+import type {
+  AdminIdeaItem,
+  AdminFolderConfig,
+  AdminIdeaStatus,
+} from "../use-admin-ideas";
 import { SidebarFolderItem } from "./sidebar-folder-item";
 import { AdminDeleteFolderModal } from "./admin-delete-folder-modal";
 
 type AdminSidebarProps = {
-  folders: FolderConfig[];
-  ideas: IdeaItem[];
-  activeStatus: IdeaStatus | string;
-  changeStatusAction: (_: IdeaStatus | string) => void;
+  folders: AdminFolderConfig[];
+  ideas: AdminIdeaItem[];
+  activeStatus: AdminIdeaStatus;
+  changeStatusAction: (_: AdminIdeaStatus) => void;
   renameFolderAction: (_: { id: string; label: string }) => void;
   changeFolderColorAction: (_: { id: string; color: string }) => void;
   duplicateFolderAction: (_: { id: string }) => void;
@@ -39,8 +43,8 @@ export function AdminSidebar({
   const getCountForFolder = (folderId: string) =>
     ideas.filter((idea) => idea.status === folderId).length;
 
-  const startEditing = (folder: FolderConfig) => {
-    setEditingId(folder.id as string);
+  const startEditing = (folder: AdminFolderConfig) => {
+    setEditingId(folder.id);
     setDraftLabel(folder.label);
     setColorMenuId(null);
     setActionsMenuId(null);
@@ -95,6 +99,7 @@ export function AdminSidebar({
     deleteTargetId !== null
       ? (folders.find((f) => f.id === deleteTargetId) ?? null)
       : null;
+
   const deleteTargetCount =
     deleteTargetId !== null ? getCountForFolder(deleteTargetId) : 0;
 
@@ -115,7 +120,7 @@ export function AdminSidebar({
         >
           <div className="flex flex-col items-center gap-12">
             {folders.map((folder) => {
-              const id = folder.id as string;
+              const id = folder.id;
               const count = getCountForFolder(id);
               const isActive = activeStatus === folder.id;
               const isEditing = editingId === folder.id;

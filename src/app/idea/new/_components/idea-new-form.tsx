@@ -13,7 +13,10 @@ export function IdeaNewForm() {
 
   const createIdea = trpc.idea.create.useMutation({
     async onSuccess() {
-      await utils.idea.list.invalidate();
+      await Promise.all([
+        utils.idea.list.invalidate(),
+        utils.idea.listPublic.invalidate(),
+      ]);
       router.push("/hub");
     },
   });

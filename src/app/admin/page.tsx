@@ -1,22 +1,61 @@
 "use client";
 
+import { useEffect, useMemo } from "react";
+import { useRouter } from "next/navigation";
 import {
   DndContext,
-  DragEndEvent,
+  type DragEndEvent,
   PointerSensor,
   useSensor,
   useSensors,
 } from "@dnd-kit/core";
-import type { IdeaStatus } from "@/lib/mock-data";
 import { AdminHeader } from "./_components/admin-header";
 import { AdminSidebar } from "./_components/admin-sidebar";
 import { AdminIdeaList } from "./_components/admin-idea-list";
 import { AdminIdeaPanel } from "./_components/admin-idea-panel";
 import { useAdminIdeas } from "./use-admin-ideas";
+import { useAdminConfig } from "./use-admin-config";
+import { authClient } from "@/lib/auth-client";
+
+function encodeNext(path: string): string {
+  return encodeURIComponent(path);
+}
+
+function normalizeDropFolderId(rawOverId: string): string | null {
+  if (!rawOverId.startsWith("folder-")) return null;
+
+  let id = rawOverId.slice("folder-".length);
+  if (!id) return null;
+
+  if (id.startsWith("sort-")) {
+    id = id.slice("sort-".length);
+  }
+
+  const trimmed = id.trim();
+  if (!trimmed) return null;
+
+  return trimmed;
+}
 
 export default function AdminPage() {
+  const router = useRouter();
+
+  const sessionQuery = authClient.useSession();
+  const isSessionLoading = sessionQuery.isPending;
+  const session = sessionQuery.data ?? null;
+
+  const nextParam = useMemo(() => encodeNext("/admin"), []);
+
+  useEffect(() => {
+    if (isSessionLoading) return;
+    if (!session) {
+      router.replace(`/login?next=${nextParam}`);
+    }
+  }, [isSessionLoading, session, router, nextParam]);
+
   const {
     isLoading,
+    unauthorized,
     folders,
     ideas,
     activeStatus,
@@ -42,13 +81,30 @@ export default function AdminPage() {
     moveIdeaToFolder,
     updateDetails,
     clearSelection,
+    setVisibility,
   } = useAdminIdeas();
+
+  const {
+    registrationsOpen,
+    toggleRegistrations,
+    unauthorized: configUnauthorized,
+  } = useAdminConfig();
+
+  useEffect(() => {
+    if (!session) return;
+    if (unauthorized || configUnauthorized) {
+      router.replace(`/login?next=${nextParam}`);
+    }
+  }, [session, unauthorized, configUnauthorized, router, nextParam]);
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
       activationConstraint: { distance: 4 },
     }),
   );
+
+  const folderIds = useMemo(() => folders.map((f) => f.id), [folders]);
+  const folderIdSet = useMemo(() => new Set(folderIds), [folderIds]);
 
   const handleDragEnd = (event: DragEndEvent) => {
     const { active, over } = event;
@@ -65,14 +121,15 @@ export default function AdminPage() {
       const overFolderId = overId.replace("folder-sort-", "");
       if (activeFolderId === overFolderId) return;
 
-      const ids = folders.map((f) => f.id);
-      if (!ids.includes(activeFolderId) || !ids.includes(overFolderId)) return;
+      if (!folderIdSet.has(activeFolderId) || !folderIdSet.has(overFolderId)) {
+        return;
+      }
 
-      const oldIndex = ids.indexOf(activeFolderId);
-      const newIndex = ids.indexOf(overFolderId);
+      const oldIndex = folderIds.indexOf(activeFolderId);
+      const newIndex = folderIds.indexOf(overFolderId);
       if (oldIndex === -1 || newIndex === -1) return;
 
-      const newOrder = [...ids];
+      const newOrder = [...folderIds];
       const [removed] = newOrder.splice(oldIndex, 1);
       newOrder.splice(newIndex, 0, removed);
       reorderFolders(newOrder);
@@ -83,11 +140,12 @@ export default function AdminPage() {
     if (!isIdeaDrag) return;
 
     const ideaId = activeId.replace("idea-", "");
+    if (!ideaId) return;
 
-    if (overId.startsWith("folder-")) {
-      const folderId = overId.replace("folder-", "");
-      if (!folderId || folderId === "") return;
-      moveIdeaToFolder(ideaId, folderId);
+    const dropFolderId = normalizeDropFolderId(overId);
+    if (dropFolderId) {
+      if (!folderIdSet.has(dropFolderId)) return;
+      moveIdeaToFolder(ideaId, dropFolderId);
       return;
     }
 
@@ -111,6 +169,14 @@ export default function AdminPage() {
     }
   };
 
+  if (isSessionLoading || (!session && !isSessionLoading)) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-[#050509] text-white">
+        <div className="text-sm text-zinc-500">Authentification...</div>
+      </div>
+    );
+  }
+
   if (isLoading && ideas.length === 0) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-[#050509] text-white">
@@ -127,6 +193,8 @@ export default function AdminPage() {
           inboxCount={inboxCount}
           devCount={devCount}
           archiveCount={archiveCount}
+          registrationsOpen={registrationsOpen}
+          toggleRegistrations={toggleRegistrations}
         />
 
         <DndContext sensors={sensors} onDragEnd={handleDragEnd}>
@@ -143,6 +211,7 @@ export default function AdminPage() {
               duplicateFolderAction={({ id }) => duplicateFolder(id)}
               deleteFolderAction={({ id }) => deleteFolder(id)}
             />
+
             <AdminIdeaList
               activeStatus={activeStatus}
               folders={folders}
@@ -153,10 +222,11 @@ export default function AdminPage() {
               renameIdeaAction={({ id, label }) => renameIdea(id, label)}
               deleteIdeaAction={({ id }) => deleteIdea(id)}
             />
+
             <div className="col-span-5 h-full overflow-y-auto">
               <AdminIdeaPanel
                 selected={selected}
-                activeStatus={activeStatus as IdeaStatus}
+                activeStatus={activeStatus}
                 managerSummary={selectedIdeaData?.managerSummary ?? ""}
                 managerContent={selectedIdeaData?.managerContent ?? ""}
                 managerLinks={selectedIdeaData?.managerLinks ?? []}
@@ -164,6 +234,7 @@ export default function AdminPage() {
                 managerNote={selectedIdeaData?.managerNote ?? ""}
                 updateIdeaDetailsAction={updateDetails}
                 clearSelectionAction={clearSelection}
+                setVisibilityAction={setVisibility}
               />
             </div>
           </div>

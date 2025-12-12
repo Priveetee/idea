@@ -1,43 +1,20 @@
 "use client";
 
+import { useState } from "react";
 import Link from "next/link";
-import type { IdeaItem } from "@/lib/mock-data";
 import { getLinkMeta } from "@/lib/link-icons";
 import { RichPreviewText } from "@/app/idea/new/_components/rich-preview-text";
 import { RiLinksLine, RiArrowRightUpLine } from "react-icons/ri";
+import type { HubIdeaItem } from "./hub-idea-card";
 
-const STATUS_CONFIG: Record<
-  string,
-  { label: string; bg: string; text: string; dot: string }
-> = {
-  INBOX: {
-    label: "Inbox",
-    bg: "bg-[#5227FF]/10",
-    text: "text-[#6b47ff]",
-    dot: "bg-[#6b47ff]",
-  },
-  DEV: {
-    label: "En cours",
-    bg: "bg-emerald-500/10",
-    text: "text-emerald-400",
-    dot: "bg-emerald-400",
-  },
-  ARCHIVE: {
-    label: "Archives",
-    bg: "bg-zinc-500/10",
-    text: "text-zinc-400",
-    dot: "bg-zinc-400",
-  },
-  DEFAULT: {
-    label: "Idée",
-    bg: "bg-zinc-500/10",
-    text: "text-zinc-400",
-    dot: "bg-zinc-400",
-  },
+const STATUS_LABEL: Record<string, string> = {
+  INBOX: "Inbox",
+  DEV: "En cours",
+  ARCHIVE: "Archives",
 };
 
 type HubIdeaHeaderBodyProps = {
-  idea: IdeaItem;
+  idea: HubIdeaItem;
   label: string;
   title: string;
   totalReactions: number;
@@ -49,10 +26,26 @@ export function HubIdeaHeaderBody({
   title,
   totalReactions,
 }: HubIdeaHeaderBodyProps) {
+  const [expanded, setExpanded] = useState(false);
+
   const end = label.indexOf("]");
   const tgi = end === -1 ? null : label.slice(0, end + 1);
-  const status = STATUS_CONFIG[idea.status] ?? STATUS_CONFIG.DEFAULT;
+
+  const isCustomFolder =
+    idea.status !== "INBOX" &&
+    idea.status !== "ARCHIVE" &&
+    idea.status !== "DEV";
+
+  const statusLabel = STATUS_LABEL[idea.status] ?? "Idée";
+
+  const hasOriginColor =
+    idea.originColor !== undefined && idea.originColor !== null;
+
+  const dotColor = hasOriginColor ? idea.originColor : "#a1a1aa";
+  const statusTextColor = hasOriginColor ? idea.originColor : "#a1a1aa";
+
   const links = idea.managerLinks ?? [];
+  const hasContent = (idea.managerContent ?? "").trim().length > 0;
 
   return (
     <>
@@ -63,12 +56,33 @@ export function HubIdeaHeaderBody({
               {tgi}
             </span>
           )}
+
           <span
-            className={`inline-flex items-center gap-1.5 rounded-full px-2 py-0.5 text-[10px] font-semibold tracking-wide ${status.bg} ${status.text}`}
+            className="inline-flex items-center gap-1.5 rounded-full px-2 py-0.5 text-[10px] font-semibold tracking-wide"
+            style={{
+              backgroundColor: "rgba(255,255,255,0.06)",
+              color: statusTextColor,
+              border: "1px solid rgba(255,255,255,0.08)",
+            }}
           >
-            <span className={`h-1.5 w-1.5 rounded-full ${status.dot}`} />
-            {status.label}
+            <span
+              className="h-1.5 w-1.5 rounded-full"
+              style={{ backgroundColor: dotColor }}
+            />
+            {statusLabel}
           </span>
+
+          {isCustomFolder && idea.originLabel && (
+            <span
+              className="inline-flex items-center rounded-full border border-white/10 px-2 py-0.5 text-[10px] font-medium text-white/90"
+              style={{
+                backgroundColor: hasOriginColor ? idea.originColor : "#27272a",
+              }}
+            >
+              {idea.originLabel}
+            </span>
+          )}
+
           {totalReactions > 0 && (
             <span className="inline-flex items-center gap-1 rounded-full bg-zinc-900/80 px-2 py-0.5 text-[10px] text-zinc-400">
               {totalReactions} réaction{totalReactions > 1 ? "s" : ""}
@@ -100,15 +114,35 @@ export function HubIdeaHeaderBody({
           </h3>
         </Link>
 
-        <div className="mt-3 line-clamp-4 text-[13px] leading-relaxed text-zinc-400">
-          {idea.managerContent ? (
-            <RichPreviewText text={idea.managerContent} />
-          ) : (
-            <span className="italic text-zinc-600">
-              Pas de description détaillée...
-            </span>
-          )}
-        </div>
+        {hasContent ? (
+          <div className="mt-3 space-y-2">
+            <div
+              className={`text-[13px] leading-relaxed text-zinc-400 rounded-xl bg-zinc-950/40 px-3 py-2 ${
+                expanded ? "max-h-60" : "max-h-32"
+              } overflow-y-auto [&::-webkit-scrollbar]:w-[6px] [&::-webkit-scrollbar-thumb]:bg-zinc-800 [&::-webkit-scrollbar-thumb]:rounded-full`}
+              style={{
+                scrollbarWidth: "thin",
+                scrollbarColor: "#3f3f46 transparent",
+              }}
+            >
+              <RichPreviewText text={idea.managerContent ?? ""} />
+            </div>
+
+            <div className="flex justify-end">
+              <button
+                type="button"
+                onClick={() => setExpanded((v) => !v)}
+                className="text-[11px] text-zinc-400 underline-offset-2 hover:text-zinc-200 hover:underline"
+              >
+                {expanded ? "Réduire" : "Lire la suite"}
+              </button>
+            </div>
+          </div>
+        ) : (
+          <div className="mt-3 text-[13px] text-zinc-500">
+            <span className="italic">Pas de description détaillée...</span>
+          </div>
+        )}
       </div>
 
       {links.length > 0 && (

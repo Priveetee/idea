@@ -1,6 +1,11 @@
 "use client";
 
 import { useState } from "react";
+import { getLinkMeta, EXTERNAL_ICON } from "@/lib/link-icons";
+import {
+  parseTextWithLinks,
+  type TextSegment,
+} from "@/app/idea/new/_components/parse-text-with-links";
 
 type HubIdeaComment = {
   id: string;
@@ -15,7 +20,7 @@ type HubIdeaCommentsProps = {
 function getRelativeTime(ts: number) {
   const diffMs = Date.now() - ts;
   const diffSec = Math.max(0, Math.floor(diffMs / 1000));
-  if (diffSec < 60) return "il y a quelques secondes";
+  if (diffSec < 60) return "à l’instant";
   const diffMin = Math.floor(diffSec / 60);
   if (diffMin < 60) return `il y a ${diffMin} min`;
   const diffH = Math.floor(diffMin / 60);
@@ -24,67 +29,88 @@ function getRelativeTime(ts: number) {
   return `il y a ${diffD} j`;
 }
 
+const MAX_LENGTH = 220;
+
 export function HubIdeaComments({ comments }: HubIdeaCommentsProps) {
-  const [expandedComments, setExpandedComments] = useState<
-    Record<string, boolean>
-  >({});
-  const [showAllComments, setShowAllComments] = useState(false);
+  const [expandedIds, setExpandedIds] = useState<Record<string, boolean>>({});
 
   if (comments.length === 0) return null;
 
-  const baseComments = showAllComments
-    ? comments
-    : comments.length <= 2
-      ? comments
-      : comments.slice(-2);
-  const visibleComments = baseComments;
-
-  const toggleCommentExpand = (id: string) => {
-    setExpandedComments((prev) => ({
-      ...prev,
-      [id]: !prev[id],
-    }));
-  };
-
-  const handleToggleShowAllComments = () => {
-    setShowAllComments((prev) => !prev);
+  const toggle = (id: string) => {
+    setExpandedIds((prev) => ({ ...prev, [id]: !prev[id] }));
   };
 
   return (
-    <div className="relative mb-2 max-h-32 space-y-1.5 overflow-hidden text-[12px] text-zinc-300">
-      {comments.length > visibleComments.length && (
-        <button
-          type="button"
-          onClick={handleToggleShowAllComments}
-          className="mb-1 text-[11px] text-zinc-500 hover:text-zinc-300"
-        >
-          {showAllComments
-            ? "Réduire les commentaires"
-            : `${comments.length - visibleComments.length} commentaire(s) plus ancien(s)…`}
-        </button>
-      )}
+    <div
+      className="mb-3 max-h-56 space-y-2 overflow-y-auto pr-1"
+      style={{
+        scrollbarWidth: "thin",
+        scrollbarColor: "#3f3f46 transparent",
+      }}
+    >
+      {comments.map((c) => {
+        const expanded = expandedIds[c.id] ?? false;
+        const tooLong = c.text.length > MAX_LENGTH;
+        const rawText =
+          expanded || !tooLong ? c.text : `${c.text.slice(0, MAX_LENGTH)}…`;
 
-      {visibleComments.map((c) => {
-        const expanded = expandedComments[c.id] === true;
-        const isLong = c.text.length > 160;
+        const segments: TextSegment[] = parseTextWithLinks(rawText);
+        const ExternalIcon = EXTERNAL_ICON;
 
         return (
           <div
             key={c.id}
-            className="rounded-lg bg-zinc-900/60 px-3 py-1.5 text-[12px] text-zinc-200"
+            className="rounded-xl border border-zinc-800 bg-zinc-950/70 px-3 py-2 text-[12px] text-zinc-200"
           >
-            <p className={`break-words ${expanded ? "" : "line-clamp-2"}`}>
-              {c.text}
-            </p>
-            <div className="mt-0.5 flex items-center justify-between">
-              <span className="text-[10px] text-zinc-500">
-                {getRelativeTime(c.createdAt)}
-              </span>
-              {isLong && (
+            <div className="max-w-full whitespace-pre-wrap break-words">
+              {segments.map((seg, idx) => {
+                if (seg.type === "text") {
+                  return <span key={`t-${c.id}-${idx}`}>{seg.value}</span>;
+                }
+
+                const meta = getLinkMeta(seg.url);
+                const Icon = meta.icon;
+
+                let host = "";
+                try {
+                  host = new URL(seg.url).hostname.replace(/^www\./i, "");
+                } catch {
+                  host = seg.url;
+                }
+
+                return (
+                  <span
+                    key={`l-${c.id}-${idx}`}
+                    className="inline-flex items-center gap-1 align-middle"
+                  >
+                    <a
+                      href={seg.url}
+                      target="_blank"
+                      rel="noreferrer noopener"
+                      className="inline-flex items-center gap-1 rounded-full bg-zinc-900/80 px-2 py-0.5 text-[11px] text-zinc-100 underline-offset-2 hover:bg-zinc-800 hover:underline"
+                    >
+                      <span className="flex h-4 w-4 items-center justify-center rounded-full bg-zinc-950">
+                        <Icon className="h-3 w-3" />
+                      </span>
+                      <span className="max-w-[120px] truncate">
+                        {meta.label}
+                      </span>
+                      <span className="max-w-[110px] truncate text-[10px] text-zinc-400">
+                        {host}
+                      </span>
+                      <ExternalIcon className="h-3 w-3 text-zinc-500" />
+                    </a>
+                  </span>
+                );
+              })}
+            </div>
+            <div className="mt-1 flex items-center justify-between text-[10px] text-zinc-500">
+              <span>{getRelativeTime(c.createdAt)}</span>
+              {tooLong && (
                 <button
                   type="button"
-                  onClick={() => toggleCommentExpand(c.id)}
-                  className="text-[11px] font-medium text-zinc-500 hover:text-zinc-300"
+                  onClick={() => toggle(c.id)}
+                  className="text-[10px] text-zinc-400 underline-offset-2 hover:text-zinc-200 hover:underline"
                 >
                   {expanded ? "Réduire" : "Lire la suite"}
                 </button>
@@ -93,8 +119,6 @@ export function HubIdeaComments({ comments }: HubIdeaCommentsProps) {
           </div>
         );
       })}
-
-      <div className="pointer-events-none absolute inset-x-0 bottom-0 h-5 bg-gradient-to-t from-[#0A0A0C] to-transparent" />
     </div>
   );
 }

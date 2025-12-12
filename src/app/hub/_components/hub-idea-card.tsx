@@ -1,11 +1,34 @@
 "use client";
 
 import { useState, type KeyboardEvent } from "react";
-import type { IdeaItem } from "@/lib/mock-data";
 import { RiSendPlaneFill } from "react-icons/ri";
 import { HubIdeaComments } from "./hub-idea-comments";
 import { HubIdeaHeaderBody } from "./hub-idea-header-body";
 import { HubIdeaReactionsBar } from "./hub-idea-reactions-bar";
+
+export type HubIdeaLink = {
+  id: string;
+  label: string;
+  url: string;
+};
+
+export type HubIdeaBullet = {
+  id: string;
+  text: string;
+};
+
+export type HubIdeaItem = {
+  id: string;
+  label: string;
+  status: string;
+  originLabel?: string;
+  originColor?: string;
+  managerSummary?: string;
+  managerContent?: string;
+  managerLinks?: HubIdeaLink[];
+  managerBullets?: HubIdeaBullet[];
+  managerNote?: string;
+};
 
 type HubIdeaComment = {
   id: string;
@@ -14,7 +37,7 @@ type HubIdeaComment = {
 };
 
 type HubIdeaCardProps = {
-  idea: IdeaItem;
+  idea: HubIdeaItem;
   reactions: string[];
   comments: HubIdeaComment[];
   onToggleReaction: (_emoji: string) => void;
@@ -92,6 +115,7 @@ export function HubIdeaCard({
             onKeyDown={handleCommentKeyDown}
           />
           <button
+            type="button"
             onClick={handleSendClick}
             className="absolute right-2 flex h-6 w-6 items-center justify-center rounded-lg text-zinc-600 transition hover:bg-[#5227FF] hover:text-white"
           >

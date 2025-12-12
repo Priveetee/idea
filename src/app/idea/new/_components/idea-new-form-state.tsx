@@ -1,9 +1,13 @@
 "use client";
 
 import { useRef, useState, type KeyboardEvent } from "react";
-import { z } from "zod";
-import type { IdeaLink } from "@/lib/mock-data";
 import { IdeaNewFormView } from "./idea-new-form-view";
+
+type IdeaLink = {
+  id: string;
+  label: string;
+  url: string;
+};
 
 export type IdeaNewFormPayload = {
   tgi: string;
@@ -14,19 +18,6 @@ export type IdeaNewFormPayload = {
   tag?: string;
   links: IdeaLink[];
 };
-
-const ideaFormSchema = z.object({
-  tgi: z
-    .string()
-    .regex(/^T[0-9]{7}$/, "Format attendu : T + 7 chiffres, ex : T0000001"),
-  title: z.string().min(1, "Ajoutez au moins un titre à votre idée."),
-  description: z.string().optional(),
-  impact: z.enum(["faible", "moyen", "fort"]).optional(),
-  complexity: z.enum(["faible", "moyenne", "forte"]).optional(),
-  tag: z.string().optional(),
-});
-
-type IdeaFormValues = z.infer<typeof ideaFormSchema>;
 
 type IdeaNewFormStateProps = {
   onValidSubmit: (_payload: IdeaNewFormPayload) => void;
@@ -40,9 +31,11 @@ function generateLinkId(existing: IdeaLink[]): string {
   return String(i);
 }
 
-export function IdeaNewFormState(props: IdeaNewFormStateProps) {
-  const { onValidSubmit, submitting, externalError } = props;
-
+export function IdeaNewFormState({
+  onValidSubmit,
+  submitting,
+  externalError,
+}: IdeaNewFormStateProps) {
   const [tgi, setTgi] = useState("");
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
@@ -67,52 +60,47 @@ export function IdeaNewFormState(props: IdeaNewFormStateProps) {
   const isTitleRoughlyValid = title.trim().length > 0;
   const isFormRoughlyValid = isTgiRoughlyValid && isTitleRoughlyValid;
 
-  const validate = (): IdeaFormValues | null => {
-    const formValues: IdeaFormValues = {
-      tgi: tgi.trim(),
-      title: title.trim(),
-      description: description.trim() || undefined,
-      impact: impact || undefined,
-      complexity: complexity || undefined,
-      tag: tag.trim() || undefined,
-    };
+  const validate = () => {
+    const trimmedTgi = tgi.trim();
+    const trimmedTitle = title.trim();
 
-    const result = ideaFormSchema.safeParse(formValues);
+    const nextFieldError: { tgi?: string; title?: string } = {};
 
-    if (!result.success) {
-      const issues = result.error.issues;
-      const byPath: { tgi?: string; title?: string } = {};
+    if (!/^T[0-9]{7}$/.test(trimmedTgi)) {
+      nextFieldError.tgi =
+        "Format attendu : T + 7 chiffres, ex : T0000001 (T majuscule).";
+    }
 
-      issues.forEach((issue) => {
-        const path = issue.path[0];
-        if (path === "tgi") byPath.tgi = issue.message;
-        if (path === "title") byPath.title = issue.message;
-      });
+    if (!trimmedTitle) {
+      nextFieldError.title =
+        "Ajoutez au moins un titre à votre idée (une phrase simple).";
+    }
 
-      setFieldError(byPath);
+    if (Object.keys(nextFieldError).length > 0) {
+      setFieldError(nextFieldError);
       setError(null);
       return null;
     }
 
     setFieldError({});
     setError(null);
-    return result.data;
-  };
-
-  const handleSubmit = () => {
-    const data = validate();
-    if (!data) return;
 
     const payload: IdeaNewFormPayload = {
-      tgi: data.tgi,
-      title: data.title,
-      description: data.description,
-      impact: data.impact,
-      complexity: data.complexity,
-      tag: data.tag,
+      tgi: trimmedTgi,
+      title: trimmedTitle,
+      description: description.trim() || undefined,
+      impact: impact || undefined,
+      complexity: complexity || undefined,
+      tag: tag.trim() || undefined,
       links,
     };
 
+    return payload;
+  };
+
+  const handleSubmit = () => {
+    const payload = validate();
+    if (!payload) return;
     onValidSubmit(payload);
   };
 
@@ -160,8 +148,6 @@ export function IdeaNewFormState(props: IdeaNewFormStateProps) {
     setLinks((prev) => prev.filter((l) => l.id !== id));
   };
 
-  const mergedError = error ?? externalError;
-
   const previewTitle = (() => {
     const safeTgi = tgi || "TXXXXXXX";
     const base = title || "Titre de votre idée";
@@ -173,10 +159,10 @@ export function IdeaNewFormState(props: IdeaNewFormStateProps) {
   if (complexity) previewMetaParts.push(`Complexité : ${complexity}`);
   if (tag.trim()) previewMetaParts.push(`Tag : ${tag.trim()}`);
 
+  const hasAnyMeta = impact || complexity || tag.trim();
+
   const titleLength = title.trim().length;
   const titleTooLong = titleLength > 200;
-
-  const hasAnyMeta = impact || complexity || tag.trim();
 
   return (
     <IdeaNewFormView
@@ -198,7 +184,7 @@ export function IdeaNewFormState(props: IdeaNewFormStateProps) {
       addLink={handleAddLink}
       removeLink={handleRemoveLink}
       fieldError={fieldError}
-      error={mergedError}
+      error={error ?? externalError}
       submitting={submitting}
       isFormRoughlyValid={isFormRoughlyValid}
       titleLength={titleLength}

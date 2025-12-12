@@ -12,6 +12,65 @@ const schema = z.object({
   password: z.string().min(6),
 });
 
+const REG_CLOSED_MSG = "Les Inscriptions sont fermer 👾 !";
+
+function getStatus(err: unknown): number | null {
+  if (!err) return null;
+
+  if (err instanceof Response) {
+    return err.status;
+  }
+
+  if (typeof err === "object") {
+    const e = err as Record<string, unknown>;
+    const status = e.status;
+    if (typeof status === "number") return status;
+
+    const data = e.data;
+    if (data && typeof data === "object") {
+      const d = data as Record<string, unknown>;
+      const httpStatus = d.httpStatus;
+      if (typeof httpStatus === "number") return httpStatus;
+    }
+  }
+
+  return null;
+}
+
+function getMessage(err: unknown): string | null {
+  if (!err || typeof err !== "object") return null;
+
+  const e = err as Record<string, unknown>;
+  const msg = e.message;
+  if (typeof msg === "string" && msg.trim()) return msg.trim();
+
+  const data = e.data;
+  if (data && typeof data === "object") {
+    const d = data as Record<string, unknown>;
+    const dm = d.message;
+    if (typeof dm === "string" && dm.trim()) return dm.trim();
+  }
+
+  return null;
+}
+
+function normalizeRegisterError(err: unknown): string {
+  const status = getStatus(err);
+  if (status === 422) return REG_CLOSED_MSG;
+
+  const msg = getMessage(err) ?? "";
+  const lower = msg.toLowerCase();
+
+  if (
+    lower.includes("inscriptions") &&
+    (lower.includes("ferm") || lower.includes("closed"))
+  ) {
+    return REG_CLOSED_MSG;
+  }
+
+  return msg || "Impossible de créer le compte.";
+}
+
 export default function RegisterPage() {
   const router = useRouter();
   const { data: session } = authClient.useSession();
@@ -31,7 +90,7 @@ export default function RegisterPage() {
       setValues((prev) => ({ ...prev, [field]: e.target.value }));
     };
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
 
@@ -43,7 +102,7 @@ export default function RegisterPage() {
 
     setLoading(true);
 
-    const { error: signUpError } = await authClient.signUp.email(
+    authClient.signUp.email(
       {
         name: values.name,
         email: values.email,
@@ -60,14 +119,10 @@ export default function RegisterPage() {
         },
         onError(ctx) {
           setLoading(false);
-          setError(ctx.error.message || "Impossible de créer le compte.");
+          setError(normalizeRegisterError(ctx.error));
         },
       },
     );
-
-    if (signUpError) {
-      setLoading(false);
-    }
   };
 
   if (session) {
@@ -155,7 +210,7 @@ export default function RegisterPage() {
                   strokeLinecap="round"
                   strokeLinejoin="round"
                   strokeWidth={2}
-                  d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"
+                  d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"
                 />
               </svg>
             </div>

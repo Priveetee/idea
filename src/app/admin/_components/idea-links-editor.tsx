@@ -3,12 +3,12 @@
 import { useState } from "react";
 import { FaPlus, FaLink } from "react-icons/fa6";
 import { FiExternalLink } from "react-icons/fi";
-import type { IdeaLink } from "@/lib/mock-data";
+import type { AdminIdeaLink } from "../use-admin-ideas";
 import { getIconForUrl } from "@/lib/link-icons";
 
 type IdeaLinksEditorProps = {
-  links: IdeaLink[];
-  onChange: (_: IdeaLink[]) => void;
+  links: AdminIdeaLink[];
+  onChange: (_: AdminIdeaLink[]) => void;
 };
 
 function genId(prefix: string) {

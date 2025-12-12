@@ -8,17 +8,30 @@ import { AiOutlineThunderbolt } from "react-icons/ai";
 import { TbListDetails } from "react-icons/tb";
 import { IoKeyOutline } from "react-icons/io5";
 import { FaLink, FaRegStickyNote } from "react-icons/fa";
-import type { IdeaStatus, IdeaLink, IdeaBullet } from "@/lib/mock-data";
 import { getIconForUrl } from "@/lib/link-icons";
+import { AdminRichTextPreview } from "./admin-rich-text-preview";
+
+type AdminIdeaStatus = string;
+
+type AdminIdeaLink = {
+  id: string;
+  label: string;
+  url: string;
+};
+
+type AdminIdeaBullet = {
+  id: string;
+  text: string;
+};
 
 type IdeaReadViewProps = {
   titleLabel: string;
   tgiLabel: string | null;
-  activeStatus: IdeaStatus;
+  activeStatus: AdminIdeaStatus;
   managerSummary: string;
   managerContent: string;
-  managerBullets: IdeaBullet[];
-  managerLinks: IdeaLink[];
+  managerBullets: AdminIdeaBullet[];
+  managerLinks: AdminIdeaLink[];
   managerNote: string;
 };
 
@@ -92,7 +105,7 @@ export function IdeaReadView({
             )}
           </div>
         </div>
-        <div className="flex flex-col items-end text-[11px] text-zinc-500"></div>
+        <div className="flex flex-col items-end text-[11px] text-zinc-500" />
       </header>
 
       <div className="space-y-2">
@@ -113,16 +126,12 @@ export function IdeaReadView({
           </SectionBox>
         )}
 
-        {formattedContent.length > 0 && (
+        {managerContent.trim() && (
           <SectionBox
             icon={<TbListDetails className="h-4 w-4 text-sky-300" />}
             title="Détail de l'idée"
           >
-            <div className="max-h-64 max-w-[640px] overflow-y-auto pr-1 space-y-2 leading-relaxed">
-              {formattedContent.map((para) => (
-                <p key={para}>{para}</p>
-              ))}
-            </div>
+            <AdminRichTextPreview content={managerContent} />
           </SectionBox>
         )}
 
@@ -153,6 +162,14 @@ export function IdeaReadView({
             <div className="space-y-1.5 text-xs">
               {managerLinks.map((link) => {
                 const Icon = getIconForUrl(link.url);
+
+                let host = "";
+                try {
+                  host = new URL(link.url).hostname.replace(/^www\./i, "");
+                } catch {
+                  host = link.url;
+                }
+
                 return (
                   <a
                     key={link.id}
@@ -169,7 +186,7 @@ export function IdeaReadView({
                         {link.label}
                       </span>
                       <span className="truncate text-[10px] text-zinc-500">
-                        {link.url}
+                        {host}
                       </span>
                     </div>
                     <FiExternalLink className="ml-auto h-3 w-3 flex-shrink-0 text-zinc-500" />

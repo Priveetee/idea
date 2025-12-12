@@ -1,10 +1,15 @@
 "use client";
 
 import type { KeyboardEvent, RefObject } from "react";
-import type { IdeaLink } from "@/lib/mock-data";
 import { RichPreviewText } from "./rich-preview-text";
 import { getLinkMeta } from "@/lib/link-icons";
 import { IdeaNewFields } from "./idea-new-fields";
+
+type IdeaLink = {
+  id: string;
+  label: string;
+  url: string;
+};
 
 type IdeaNewFormViewProps = {
   tgi: string;

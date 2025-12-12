@@ -1,12 +1,12 @@
 "use client";
 
 import { useState } from "react";
-import type { IdeaStatus } from "@/lib/mock-data";
+import type { AdminIdeaStatus } from "../use-admin-ideas";
 
 type IdeaCreationModalProps = {
-  activeStatus: IdeaStatus | string;
+  activeStatus: AdminIdeaStatus;
   closeAction: () => void;
-  createAction: (_: { label: string; status: IdeaStatus | string }) => void;
+  createAction: (_: { label: string; status: AdminIdeaStatus }) => void;
 };
 
 export function IdeaCreationModal({

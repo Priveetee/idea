@@ -1,53 +1,131 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo } from "react";
 import Link from "next/link";
 import { trpc } from "@/lib/trpc";
-import type { IdeaItem } from "@/lib/mock-data";
-import { HubIdeaCard } from "./_components/hub-idea-card";
+import { getBrowserFingerprint } from "@/lib/fingerprint";
+import { HubIdeaCard, type HubIdeaItem } from "./_components/hub-idea-card";
 import {
   HubAnimatedList,
   type HubAnimatedListItem,
 } from "./_components/hub-animated-list";
 
-type ReactionMap = Record<string, string[]>;
 type Comment = { id: string; text: string; createdAt: number };
 type CommentMap = Record<string, Comment[]>;
 
-function createComment(text: string): Comment {
-  return {
-    id: `${Date.now()}-${Math.random().toString(16).slice(2)}`,
-    text,
-    createdAt: Date.now(),
-  };
-}
+type PublicIdea = {
+  id: string;
+  label: string;
+  status: string;
+  managerSummary: string | null;
+  managerContent: string | null;
+  managerNote: string | null;
+  links: { id: string; label: string; url: string }[];
+  bullets: { id: string; text: string }[];
+  reactions?: { emoji: string; fingerprint: string }[];
+  comments?: { id: string; text: string; createdAt: string | Date }[];
+};
+
+type FolderRow = {
+  id: string;
+  label: string;
+  color: string;
+  position: number;
+};
 
 export default function HubPage() {
-  const { data, isLoading } = trpc.idea.list.useQuery();
-  const [reactions, setReactions] = useState<ReactionMap>({});
-  const [comments, setComments] = useState<CommentMap>({});
+  const { data, isLoading } = trpc.idea.listPublic.useQuery(undefined, {
+    refetchInterval: 5000,
+    refetchIntervalInBackground: true,
+  });
 
-  const ideas: IdeaItem[] = useMemo(
-    () =>
-      (data ?? []).map((idea) => ({
-        id: idea.id,
-        label: idea.label,
-        status: idea.status,
-        managerSummary: idea.managerSummary,
-        managerContent: idea.managerContent,
-        managerLinks: idea.links?.map((l) => ({
-          id: l.id,
-          label: l.label,
-          url: l.url,
-        })),
-        managerBullets: idea.bullets?.map((b) => ({
-          id: b.id,
-          text: b.text,
-        })),
-        managerNote: idea.managerNote,
-      })),
+  const { data: folderData } = trpc.folder.listPublic.useQuery();
+
+  const utils = trpc.useUtils();
+  const addReactionMutation = trpc.idea.addReaction.useMutation();
+  const clearReactionsMutation = trpc.idea.clearReactionsForEmoji.useMutation();
+  const addCommentMutation = trpc.idea.addComment.useMutation();
+
+  const fingerprint = getBrowserFingerprint();
+
+  const folders: FolderRow[] = useMemo(
+    () => (folderData ?? []) as FolderRow[],
+    [folderData],
+  );
+
+  const folderMetaById = useMemo(() => {
+    const map = new Map<string, { label: string; color: string }>();
+    folders.forEach((f) => map.set(f.id, { label: f.label, color: f.color }));
+    return map;
+  }, [folders]);
+
+  const ideasRaw: PublicIdea[] = useMemo(
+    () => (data ?? []) as PublicIdea[],
     [data],
   );
+
+  const ideas: HubIdeaItem[] = useMemo(
+    () =>
+      ideasRaw.map((idea) => {
+        const meta = folderMetaById.get(idea.status);
+        return {
+          id: idea.id,
+          label: idea.label,
+          status: idea.status,
+          originLabel: meta?.label,
+          originColor: meta?.color,
+          managerSummary: idea.managerSummary ?? "",
+          managerContent: idea.managerContent ?? "",
+          managerLinks: idea.links.map((l) => ({
+            id: l.id,
+            label: l.label,
+            url: l.url,
+          })),
+          managerBullets: idea.bullets.map((b) => ({
+            id: b.id,
+            text: b.text,
+          })),
+          managerNote: idea.managerNote ?? "",
+        };
+      }),
+    [ideasRaw, folderMetaById],
+  );
+
+  const reactionCounts = useMemo(() => {
+    const map: Record<string, string[]> = {};
+    ideasRaw.forEach((idea) => {
+      const emojis: string[] = idea.reactions?.map((r) => r.emoji) ?? [];
+      map[idea.id] = emojis;
+    });
+    return map;
+  }, [ideasRaw]);
+
+  const myReactionsByIdeaId = useMemo(() => {
+    const map = new Map<string, Set<string>>();
+    ideasRaw.forEach((idea) => {
+      const mine = new Set(
+        (idea.reactions ?? [])
+          .filter((r) => r.fingerprint === fingerprint)
+          .map((r) => r.emoji),
+      );
+      map.set(idea.id, mine);
+    });
+    return map;
+  }, [ideasRaw, fingerprint]);
+
+  const initialComments: CommentMap = useMemo(() => {
+    const map: CommentMap = {};
+    ideasRaw.forEach((idea) => {
+      const cs: Comment[] =
+        idea.comments?.map((c) => ({
+          id: c.id,
+          text: c.text,
+          createdAt: new Date(c.createdAt).getTime(),
+        })) ?? [];
+      map[idea.id] = cs;
+    });
+    return map;
+  }, [ideasRaw]);
 
   const listItems: HubAnimatedListItem[] = useMemo(
     () =>
@@ -58,34 +136,42 @@ export default function HubPage() {
     [ideas],
   );
 
+  const getReactionsForIdea = (ideaId: string): string[] =>
+    reactionCounts[ideaId] ?? [];
+
+  const getCommentsForIdea = (ideaId: string): Comment[] =>
+    initialComments[ideaId] ?? [];
+
+  const invalidate = () => {
+    void utils.idea.listPublic.invalidate();
+    void utils.folder.listPublic.invalidate();
+  };
+
   const handleToggleReaction = (ideaId: string, emoji: string) => {
-    setReactions((prev) => {
-      const current = prev[ideaId] ?? [];
-      const exists = current.includes(emoji);
+    const mine = myReactionsByIdeaId.get(ideaId) ?? new Set<string>();
+    const iReacted = mine.has(emoji);
 
-      const nextReactions = exists
-        ? current.filter((e) => e !== emoji)
-        : [...current, emoji];
-
-      return {
-        ...prev,
-        [ideaId]: nextReactions,
-      };
-    });
+    if (iReacted) {
+      clearReactionsMutation.mutate(
+        { ideaId, emoji, fingerprint },
+        { onSuccess: invalidate },
+      );
+    } else {
+      addReactionMutation.mutate(
+        { ideaId, emoji, fingerprint },
+        { onSuccess: invalidate },
+      );
+    }
   };
 
   const handleAddComment = (ideaId: string, text: string) => {
     const trimmed = text.trim();
     if (!trimmed) return;
 
-    setComments((prev) => {
-      const current = prev[ideaId] ?? [];
-      const next = [...current, createComment(trimmed)];
-      return {
-        ...prev,
-        [ideaId]: next.slice(-5),
-      };
-    });
+    addCommentMutation.mutate(
+      { ideaId, text: trimmed, fingerprint },
+      { onSuccess: invalidate },
+    );
   };
 
   return (
@@ -139,12 +225,12 @@ export default function HubPage() {
               enableDrag={false}
               showGradients={false}
               renderItem={(item) => {
-                const idea = ideas.find((i) => i.id === item.id) as IdeaItem;
-                const ideaComments = comments[idea.id] ?? [];
+                const idea = ideas.find((i) => i.id === item.id)!;
+                const ideaComments = getCommentsForIdea(idea.id);
                 return (
                   <HubIdeaCard
                     idea={idea}
-                    reactions={reactions[idea.id] ?? []}
+                    reactions={getReactionsForIdea(idea.id)}
                     comments={ideaComments}
                     onToggleReaction={(emoji) =>
                       handleToggleReaction(idea.id, emoji)
