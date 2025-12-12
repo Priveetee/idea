@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import Link from "next/link";
 import { getLinkMeta } from "@/lib/link-icons";
 import { RichPreviewText } from "@/app/idea/new/_components/rich-preview-text";
@@ -25,6 +26,8 @@ export function HubIdeaHeaderBody({
   title,
   totalReactions,
 }: HubIdeaHeaderBodyProps) {
+  const [expanded, setExpanded] = useState(false);
+
   const end = label.indexOf("]");
   const tgi = end === -1 ? null : label.slice(0, end + 1);
 
@@ -42,6 +45,7 @@ export function HubIdeaHeaderBody({
   const statusTextColor = hasOriginColor ? idea.originColor : "#a1a1aa";
 
   const links = idea.managerLinks ?? [];
+  const hasContent = (idea.managerContent ?? "").trim().length > 0;
 
   return (
     <>
@@ -110,15 +114,35 @@ export function HubIdeaHeaderBody({
           </h3>
         </Link>
 
-        <div className="mt-3 line-clamp-4 text-[13px] leading-relaxed text-zinc-400">
-          {idea.managerContent ? (
-            <RichPreviewText text={idea.managerContent} />
-          ) : (
-            <span className="italic text-zinc-600">
-              Pas de description détaillée...
-            </span>
-          )}
-        </div>
+        {hasContent ? (
+          <div className="mt-3 space-y-2">
+            <div
+              className={`text-[13px] leading-relaxed text-zinc-400 rounded-xl bg-zinc-950/40 px-3 py-2 ${
+                expanded ? "max-h-60" : "max-h-32"
+              } overflow-y-auto [&::-webkit-scrollbar]:w-[6px] [&::-webkit-scrollbar-thumb]:bg-zinc-800 [&::-webkit-scrollbar-thumb]:rounded-full`}
+              style={{
+                scrollbarWidth: "thin",
+                scrollbarColor: "#3f3f46 transparent",
+              }}
+            >
+              <RichPreviewText text={idea.managerContent ?? ""} />
+            </div>
+
+            <div className="flex justify-end">
+              <button
+                type="button"
+                onClick={() => setExpanded((v) => !v)}
+                className="text-[11px] text-zinc-400 underline-offset-2 hover:text-zinc-200 hover:underline"
+              >
+                {expanded ? "Réduire" : "Lire la suite"}
+              </button>
+            </div>
+          </div>
+        ) : (
+          <div className="mt-3 text-[13px] text-zinc-500">
+            <span className="italic">Pas de description détaillée...</span>
+          </div>
+        )}
       </div>
 
       {links.length > 0 && (
