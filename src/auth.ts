@@ -11,6 +11,16 @@ const prisma = new PrismaClient({
   adapter,
 });
 
+function registrationsClosedResponse(): Response {
+  return Response.json(
+    {
+      code: "REGISTRATIONS_CLOSED",
+      message: "Les inscriptions sont fermées. Contactez l'administrateur.",
+    },
+    { status: 403 },
+  );
+}
+
 export const auth = betterAuth({
   database: prismaAdapter(prisma, { provider: "sqlite" }),
   emailAndPassword: {
@@ -27,9 +37,7 @@ export const auth = betterAuth({
             }));
 
           if (!cfg.registrationsOpen) {
-            throw new Error(
-              "Les inscriptions sont fermées. Contacte l'administrateur.",
-            );
+            throw registrationsClosedResponse();
           }
 
           return { data: user };

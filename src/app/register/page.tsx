@@ -56,7 +56,7 @@ function normalizeRegisterError(err: unknown): string {
     lower.includes("inscriptions") &&
     (lower.includes("ferm") || lower.includes("closed"))
   ) {
-    return "Les inscriptions sont fermées. Contacte l'administrateur.";
+    return "Les inscriptions sont fermées. Contactez l'administrateur.";
   }
 
   const status =
@@ -65,7 +65,7 @@ function normalizeRegisterError(err: unknown): string {
       : undefined;
 
   if (typeof status === "number" && status === 422) {
-    return "Les inscriptions sont fermées. Contacte l'administrateur.";
+    return "Les inscriptions sont fermées. Contactez l'administrateur.";
   }
 
   return msg || fallback;
