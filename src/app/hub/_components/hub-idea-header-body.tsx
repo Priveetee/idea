@@ -78,7 +78,12 @@ export function HubIdeaHeaderBody({
           </span>
 
           {isCustomFolder && idea.originLabel && (
-            <span className="inline-flex items-center rounded-full bg-zinc-900/80 px-2 py-0.5 text-[10px] text-zinc-400">
+            <span
+              className="inline-flex items-center rounded-full border border-white/10 px-2 py-0.5 text-[10px] font-medium text-white/90"
+              style={{
+                backgroundColor: idea.originColor ?? "#27272a",
+              }}
+            >
               {idea.originLabel}
             </span>
           )}

@@ -68,9 +68,9 @@ export default function HubPage() {
     [folderData],
   );
 
-  const folderLabelById = useMemo(() => {
-    const map = new Map<string, string>();
-    folders.forEach((f) => map.set(f.id, f.label));
+  const folderMetaById = useMemo(() => {
+    const map = new Map<string, { label: string; color: string }>();
+    folders.forEach((f) => map.set(f.id, { label: f.label, color: f.color }));
     return map;
   }, [folders]);
 
@@ -81,25 +81,29 @@ export default function HubPage() {
 
   const ideas: HubIdeaItem[] = useMemo(
     () =>
-      ideasRaw.map((idea) => ({
-        id: idea.id,
-        label: idea.label,
-        status: idea.status,
-        originLabel: folderLabelById.get(idea.status) ?? undefined,
-        managerSummary: idea.managerSummary ?? "",
-        managerContent: idea.managerContent ?? "",
-        managerLinks: idea.links.map((l) => ({
-          id: l.id,
-          label: l.label,
-          url: l.url,
-        })),
-        managerBullets: idea.bullets.map((b) => ({
-          id: b.id,
-          text: b.text,
-        })),
-        managerNote: idea.managerNote ?? "",
-      })),
-    [ideasRaw, folderLabelById],
+      ideasRaw.map((idea) => {
+        const meta = folderMetaById.get(idea.status);
+        return {
+          id: idea.id,
+          label: idea.label,
+          status: idea.status,
+          originLabel: meta?.label,
+          originColor: meta?.color,
+          managerSummary: idea.managerSummary ?? "",
+          managerContent: idea.managerContent ?? "",
+          managerLinks: idea.links.map((l) => ({
+            id: l.id,
+            label: l.label,
+            url: l.url,
+          })),
+          managerBullets: idea.bullets.map((b) => ({
+            id: b.id,
+            text: b.text,
+          })),
+          managerNote: idea.managerNote ?? "",
+        };
+      }),
+    [ideasRaw, folderMetaById],
   );
 
   const initialReactions: ReactionMap = useMemo(() => {

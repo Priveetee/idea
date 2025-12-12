@@ -22,6 +22,7 @@ export type HubIdeaItem = {
   label: string;
   status: string;
   originLabel?: string;
+  originColor?: string;
   managerSummary?: string;
   managerContent?: string;
   managerLinks?: HubIdeaLink[];
