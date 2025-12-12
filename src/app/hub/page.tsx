@@ -3,6 +3,7 @@
 import { useMemo } from "react";
 import Link from "next/link";
 import { trpc } from "@/lib/trpc";
+import { getBrowserFingerprint } from "@/lib/fingerprint";
 import { HubIdeaCard, type HubIdeaItem } from "./_components/hub-idea-card";
 import {
   HubAnimatedList,
@@ -32,22 +33,13 @@ type FolderRow = {
   position: number;
 };
 
-function getBrowserFingerprint(): string {
-  if (typeof window === "undefined") return "server";
-  const key = "idea_fingerprint";
-  const existing = window.localStorage.getItem(key);
-  if (existing) return existing;
-  const fp = `${Date.now()}-${Math.random().toString(16).slice(2)}`;
-  window.localStorage.setItem(key, fp);
-  return fp;
-}
-
 export default function HubPage() {
   const { data, isLoading } = trpc.idea.listPublic.useQuery(undefined, {
     refetchInterval: 5000,
     refetchIntervalInBackground: true,
   });
-  const { data: folderData } = trpc.folder.list.useQuery();
+
+  const { data: folderData } = trpc.folder.listPublic.useQuery();
 
   const utils = trpc.useUtils();
   const addReactionMutation = trpc.idea.addReaction.useMutation();
@@ -152,6 +144,7 @@ export default function HubPage() {
 
   const invalidate = () => {
     void utils.idea.listPublic.invalidate();
+    void utils.folder.listPublic.invalidate();
   };
 
   const handleToggleReaction = (ideaId: string, emoji: string) => {

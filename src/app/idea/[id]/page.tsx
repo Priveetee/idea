@@ -4,6 +4,7 @@ import { useMemo, useState, type KeyboardEvent } from "react";
 import Link from "next/link";
 import { notFound, useParams } from "next/navigation";
 import { trpc } from "@/lib/trpc";
+import { getBrowserFingerprint } from "@/lib/fingerprint";
 import { getIconForUrl, EXTERNAL_ICON } from "@/lib/link-icons";
 import { RiSendPlaneFill, RiArrowLeftLine, RiShareLine } from "react-icons/ri";
 import { PublicReactionsBar } from "./public-reactions-bar";
@@ -38,16 +39,6 @@ function stackReactions(raw: string[]): StackedReaction[] {
     map.set(key, (map.get(key) ?? 0) + 1);
   });
   return Array.from(map.entries()).map(([value, count]) => ({ value, count }));
-}
-
-function getBrowserFingerprint(): string {
-  if (typeof window === "undefined") return "server";
-  const key = "idea_fingerprint";
-  const existing = window.localStorage.getItem(key);
-  if (existing) return existing;
-  const fp = `${Date.now()}-${Math.random().toString(16).slice(2)}`;
-  window.localStorage.setItem(key, fp);
-  return fp;
 }
 
 export default function PublicIdeaPage() {

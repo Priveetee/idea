@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { router, publicProcedure, protectedProcedure } from "../trpc";
+import { router, protectedProcedure, publicProcedure } from "../trpc";
 import { prisma } from "@/lib/prisma";
 
 const SYSTEM_FOLDERS = [
@@ -29,7 +29,33 @@ async function ensureSystemFolders() {
 }
 
 export const folderRouter = router({
-  list: publicProcedure.query(async () => {
+  listPublic: publicProcedure.query(async () => {
+    await ensureSystemFolders();
+
+    const publicStatuses = await prisma.idea.findMany({
+      where: { isPublic: true },
+      select: { status: true },
+      distinct: ["status"],
+    });
+
+    const ids = publicStatuses.map((s) => s.status);
+    if (ids.length === 0) return [];
+
+    const folders = await prisma.adminFolder.findMany({
+      where: { id: { in: ids } },
+      orderBy: { position: "asc" },
+      select: {
+        id: true,
+        label: true,
+        color: true,
+        position: true,
+      },
+    });
+
+    return folders;
+  }),
+
+  list: protectedProcedure.query(async () => {
     await ensureSystemFolders();
     const folders = await prisma.adminFolder.findMany({
       orderBy: { position: "asc" },
