@@ -198,9 +198,14 @@ export const ideaRouter = router({
       }),
     )
     .mutation(async ({ input }) => {
+      const status = input.status.trim();
+      if (!status || status.startsWith("sort-")) {
+        throw new Error("INVALID_STATUS");
+      }
+
       const idea = await prisma.idea.update({
         where: { id: input.id },
-        data: { status: input.status },
+        data: { status },
       });
       return idea;
     }),

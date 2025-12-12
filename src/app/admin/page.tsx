@@ -21,6 +21,22 @@ function encodeNext(path: string): string {
   return encodeURIComponent(path);
 }
 
+function normalizeDropFolderId(rawOverId: string): string | null {
+  if (!rawOverId.startsWith("folder-")) return null;
+
+  let id = rawOverId.slice("folder-".length);
+  if (!id) return null;
+
+  if (id.startsWith("sort-")) {
+    id = id.slice("sort-".length);
+  }
+
+  const trimmed = id.trim();
+  if (!trimmed) return null;
+
+  return trimmed;
+}
+
 export default function AdminPage() {
   const router = useRouter();
 
@@ -87,6 +103,9 @@ export default function AdminPage() {
     }),
   );
 
+  const folderIds = useMemo(() => folders.map((f) => f.id), [folders]);
+  const folderIdSet = useMemo(() => new Set(folderIds), [folderIds]);
+
   const handleDragEnd = (event: DragEndEvent) => {
     const { active, over } = event;
     if (!over) return;
@@ -102,14 +121,15 @@ export default function AdminPage() {
       const overFolderId = overId.replace("folder-sort-", "");
       if (activeFolderId === overFolderId) return;
 
-      const ids = folders.map((f) => f.id);
-      if (!ids.includes(activeFolderId) || !ids.includes(overFolderId)) return;
+      if (!folderIdSet.has(activeFolderId) || !folderIdSet.has(overFolderId)) {
+        return;
+      }
 
-      const oldIndex = ids.indexOf(activeFolderId);
-      const newIndex = ids.indexOf(overFolderId);
+      const oldIndex = folderIds.indexOf(activeFolderId);
+      const newIndex = folderIds.indexOf(overFolderId);
       if (oldIndex === -1 || newIndex === -1) return;
 
-      const newOrder = [...ids];
+      const newOrder = [...folderIds];
       const [removed] = newOrder.splice(oldIndex, 1);
       newOrder.splice(newIndex, 0, removed);
       reorderFolders(newOrder);
@@ -120,14 +140,12 @@ export default function AdminPage() {
     if (!isIdeaDrag) return;
 
     const ideaId = activeId.replace("idea-", "");
+    if (!ideaId) return;
 
-    if (overId.startsWith("folder-")) {
-      let folderId = overId.replace("folder-", "");
-      if (folderId.startsWith("sort-")) {
-        folderId = folderId.replace("sort-", "");
-      }
-      if (!folderId) return;
-      moveIdeaToFolder(ideaId, folderId);
+    const dropFolderId = normalizeDropFolderId(overId);
+    if (dropFolderId) {
+      if (!folderIdSet.has(dropFolderId)) return;
+      moveIdeaToFolder(ideaId, dropFolderId);
       return;
     }
 

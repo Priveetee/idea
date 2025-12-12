@@ -43,7 +43,7 @@ export const folderRouter = router({
 
     const folders = await prisma.adminFolder.findMany({
       where: { id: { in: ids } },
-      orderBy: { position: "asc" },
+      orderBy: [{ position: "asc" }, { id: "asc" }],
       select: {
         id: true,
         label: true,
@@ -58,7 +58,7 @@ export const folderRouter = router({
   list: protectedProcedure.query(async () => {
     await ensureSystemFolders();
     const folders = await prisma.adminFolder.findMany({
-      orderBy: { position: "asc" },
+      orderBy: [{ position: "asc" }, { id: "asc" }],
     });
     return folders;
   }),

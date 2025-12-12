@@ -71,7 +71,7 @@ function json429(): NextResponse {
   );
 }
 
-export function middleware(req: NextRequest) {
+export function proxy(req: NextRequest) {
   const { pathname } = req.nextUrl;
 
   if (!pathname.startsWith("/api/trpc/")) {
@@ -79,7 +79,6 @@ export function middleware(req: NextRequest) {
   }
 
   const ip = getIp(req);
-
   const keyBase = `${ip}:${pathname}`;
 
   const rules: Array<{
@@ -109,6 +108,11 @@ export function middleware(req: NextRequest) {
     },
     {
       match: (_path) => _path === "/api/trpc/idea.byIdPublic",
+      capacity: 120,
+      refillPerSec: 120 / 60,
+    },
+    {
+      match: (_path) => _path === "/api/trpc/folder.listPublic",
       capacity: 120,
       refillPerSec: 120 / 60,
     },

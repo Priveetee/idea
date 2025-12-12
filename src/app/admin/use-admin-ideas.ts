@@ -118,6 +118,8 @@ function isUnauthorizedError(err: unknown): boolean {
 }
 
 export function useAdminIdeas() {
+  const utils = trpc.useUtils();
+
   const {
     data: folderData,
     isLoading: foldersLoading,
@@ -162,13 +164,38 @@ export function useAdminIdeas() {
 
   const isLoading = foldersLoading || ideasLoading;
 
-  const folders: AdminFolderConfig[] = useMemo(
+  const foldersFromDb: AdminFolderConfig[] = useMemo(
     () =>
       ((folderData ?? []) as FolderRow[])
         .slice()
-        .sort((a, b) => a.position - b.position),
+        .sort((a, b) =>
+          a.position !== b.position
+            ? a.position - b.position
+            : a.id.localeCompare(b.id),
+        ),
     [folderData],
   );
+
+  const [folderOrderOverride, setFolderOrderOverride] = useState<
+    string[] | null
+  >(null);
+
+  const folders: AdminFolderConfig[] = useMemo(() => {
+    if (!folderOrderOverride) return foldersFromDb;
+
+    const byId = new Map(foldersFromDb.map((f) => [f.id, f]));
+    const ordered: AdminFolderConfig[] = [];
+    folderOrderOverride.forEach((id) => {
+      const f = byId.get(id);
+      if (f) ordered.push(f);
+    });
+
+    const remaining = foldersFromDb.filter(
+      (f) => !folderOrderOverride.includes(f.id),
+    );
+
+    return [...ordered, ...remaining];
+  }, [foldersFromDb, folderOrderOverride]);
 
   const ideas: AdminIdeaItem[] = useMemo(
     () => ((ideaData ?? []) as PrismaIdea[]).map(prismaIdeaToIdeaItem),
@@ -194,7 +221,6 @@ export function useAdminIdeas() {
   };
 
   const selectIdea = (payload: { item: string; index: number }) => {
-    const _ = payload.item;
     const item = filteredIdeas[payload.index];
     if (!item) return;
     setSelected({
@@ -304,15 +330,22 @@ export function useAdminIdeas() {
   };
 
   const reorderFolders = async (orderedIds: string[]) => {
+    setFolderOrderOverride(orderedIds);
+
     try {
       await reorderFoldersMutation.mutateAsync({ orderedIds });
-      await refetchFolders();
-    } catch {}
+      void utils.folder.list.invalidate();
+    } catch {
+      setFolderOrderOverride(null);
+      return;
+    }
+
+    setTimeout(() => {
+      setFolderOrderOverride(null);
+    }, 800);
   };
 
-  const reorderIdeas = (orderedIds: string[]) => {
-    const _ = orderedIds;
-  };
+  const reorderIdeas = (_orderedIds: string[]) => {};
 
   const moveIdeaToFolder = async (ideaId: string, targetFolderId: string) => {
     try {
