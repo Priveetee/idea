@@ -15,9 +15,9 @@ function registrationsClosedResponse(): Response {
   return Response.json(
     {
       code: "REGISTRATIONS_CLOSED",
-      message: "Les inscriptions sont fermées. Contactez l'administrateur.",
+      message: "Les Inscriptions sont fermer 👾 !",
     },
-    { status: 403 },
+    { status: 422 },
   );
 }
 

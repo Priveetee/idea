@@ -12,63 +12,63 @@ const schema = z.object({
   password: z.string().min(6),
 });
 
-function extractMessage(err: unknown): string | null {
+const REG_CLOSED_MSG = "Les Inscriptions sont fermer 👾 !";
+
+function getStatus(err: unknown): number | null {
+  if (!err) return null;
+
+  if (err instanceof Response) {
+    return err.status;
+  }
+
+  if (typeof err === "object") {
+    const e = err as Record<string, unknown>;
+    const status = e.status;
+    if (typeof status === "number") return status;
+
+    const data = e.data;
+    if (data && typeof data === "object") {
+      const d = data as Record<string, unknown>;
+      const httpStatus = d.httpStatus;
+      if (typeof httpStatus === "number") return httpStatus;
+    }
+  }
+
+  return null;
+}
+
+function getMessage(err: unknown): string | null {
   if (!err || typeof err !== "object") return null;
 
   const e = err as Record<string, unknown>;
-
-  const direct = e.message;
-  if (typeof direct === "string" && direct.trim()) return direct.trim();
+  const msg = e.message;
+  if (typeof msg === "string" && msg.trim()) return msg.trim();
 
   const data = e.data;
   if (data && typeof data === "object") {
     const d = data as Record<string, unknown>;
     const dm = d.message;
     if (typeof dm === "string" && dm.trim()) return dm.trim();
-
-    const errors = d.errors;
-    if (Array.isArray(errors)) {
-      const first = errors[0];
-      if (first && typeof first === "object") {
-        const fm = (first as Record<string, unknown>).message;
-        if (typeof fm === "string" && fm.trim()) return fm.trim();
-      }
-    }
-  }
-
-  const cause = e.cause;
-  if (cause && typeof cause === "object") {
-    const c = cause as Record<string, unknown>;
-    const cm = c.message;
-    if (typeof cm === "string" && cm.trim()) return cm.trim();
   }
 
   return null;
 }
 
 function normalizeRegisterError(err: unknown): string {
-  const fallback = "Impossible de créer le compte.";
+  const status = getStatus(err);
+  if (status === 422) return REG_CLOSED_MSG;
 
-  const msg = extractMessage(err) ?? "";
+  const msg = getMessage(err) ?? "";
   const lower = msg.toLowerCase();
 
   if (
     lower.includes("inscriptions") &&
     (lower.includes("ferm") || lower.includes("closed"))
   ) {
-    return "Les inscriptions sont fermées. Contactez l'administrateur.";
+    return REG_CLOSED_MSG;
   }
 
-  const status =
-    err && typeof err === "object"
-      ? (err as Record<string, unknown>).status
-      : undefined;
-
-  if (typeof status === "number" && status === 422) {
-    return "Les inscriptions sont fermées. Contactez l'administrateur.";
-  }
-
-  return msg || fallback;
+  return msg || "Impossible de créer le compte.";
 }
 
 export default function RegisterPage() {
