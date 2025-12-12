@@ -1,4 +1,4 @@
-import { initTRPC } from "@trpc/server";
+import { initTRPC, TRPCError } from "@trpc/server";
 import superjson from "superjson";
 import { auth } from "@/auth";
 
@@ -25,7 +25,7 @@ export const publicProcedure = t.procedure;
 
 export const protectedProcedure = t.procedure.use(({ ctx, next }) => {
   if (!ctx.session) {
-    throw new Error("UNAUTHORIZED");
+    throw new TRPCError({ code: "UNAUTHORIZED" });
   }
   return next();
 });
