@@ -111,6 +111,8 @@ model IdeaReaction {
   emoji       String
   fingerprint String?
   createdAt   DateTime @default(now())
+
+  @@unique([ideaId, emoji, fingerprint])
 }
 
 model IdeaComment {
