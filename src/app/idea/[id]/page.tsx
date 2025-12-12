@@ -40,14 +40,6 @@ function stackReactions(raw: string[]): StackedReaction[] {
   return Array.from(map.entries()).map(([value, count]) => ({ value, count }));
 }
 
-function createComment(text: string): PublicIdeaComment {
-  return {
-    id: `${Date.now()}-${Math.random().toString(16).slice(2)}`,
-    text,
-    createdAt: Date.now(),
-  };
-}
-
 function getBrowserFingerprint(): string {
   if (typeof window === "undefined") return "server";
   const key = "idea_fingerprint";
@@ -92,7 +84,6 @@ export default function PublicIdeaPage() {
     return { [idea.id]: cs };
   }, [idea]);
 
-  const [commentsOverride, setCommentsOverride] = useState<CommentMap>({});
   const [commentValue, setCommentValue] = useState("");
   const [copied, setCopied] = useState(false);
 
@@ -120,8 +111,7 @@ export default function PublicIdeaPage() {
   const stacked = stackReactions(dbReactions);
   const totalReactions = stacked.reduce((sum, r) => sum + r.count, 0);
 
-  const baseComments = initialComments[idea.id] ?? [];
-  const ideaComments = commentsOverride[idea.id] ?? baseComments;
+  const ideaComments = initialComments[idea.id] ?? [];
 
   const invalidate = () => {
     void utils.idea.byIdPublic.invalidate({ id: idea.id });
@@ -152,26 +142,14 @@ export default function PublicIdeaPage() {
     const trimmed = text.trim();
     if (!trimmed) return;
 
-    const localComment = createComment(trimmed);
-
-    setCommentsOverride((prev) => {
-      const current = prev[idea.id] ?? baseComments;
-      const next = [...current, localComment];
-      return {
-        ...prev,
-        [idea.id]: next.slice(-20),
-      };
-    });
-
     addCommentMutation.mutate(
       { ideaId: idea.id, text: trimmed, fingerprint },
       { onSuccess: invalidate },
     );
   };
 
-  const handleCommentKeyDown = (e: KeyboardEvent<HTMLTextAreaElement>) => {
-    if (e.key === "Enter" && !e.shiftKey) {
-      e.preventDefault();
+  const handleCommentKeyDown = (e: KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === "Enter") {
       const value = commentValue.trim();
       if (!value) return;
       handleAddComment(value);
@@ -203,19 +181,14 @@ export default function PublicIdeaPage() {
   return (
     <div className="flex h-screen flex-col overflow-hidden bg-[#050509] text-white">
       <div
-        className="flex-1 overflow-y-auto px-6 py-6
-                   [&::-webkit-scrollbar]:w-[8px]
-                   [&::-webkit-scrollbar-track]:bg-[#050509]
-                   [&::-webkit-scrollbar-thumb]:bg-zinc-800
-                   [&::-webkit-scrollbar-thumb]:rounded-full
-                   [&::-webkit-scrollbar-thumb:hover]:bg-zinc-700"
+        className="flex-1 overflow-y-auto px-6 py-6 [&::-webkit-scrollbar]:w-[8px] [&::-webkit-scrollbar-track]:bg-[#050509] [&::-webkit-scrollbar-thumb]:bg-zinc-800 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb:hover]:bg-zinc-700"
         style={{
           scrollbarWidth: "thin",
           scrollbarColor: "#3f3f46 #050509",
         }}
       >
         <div className="mx-auto flex min-h-full max-w-5xl flex-col">
-          <header className="mb-4 flex items.center justify-between gap-4">
+          <header className="mb-4 flex items-center justify-between gap-4">
             <Link
               href="/hub"
               className="inline-flex items-center gap-2 rounded-full border border-zinc-800 bg-zinc-950 px-3 py-1.5 text-[12px] text-zinc-300 transition hover:border-zinc-700 hover:bg-zinc-900"
@@ -238,10 +211,10 @@ export default function PublicIdeaPage() {
           </header>
 
           <main className="mb-4 rounded-3xl border border-zinc-900 bg-[#060010] shadow-[0_0_40px_rgba(0,0,0,0.5)]">
-            <div className="border-b border-zinc-900 px-8 pb-5 pt-6 space-y-3">
+            <div className="space-y-3 border-b border-zinc-900 px-8 pb-5 pt-6">
               <div className="flex flex-wrap items-center gap-2 text-[11px] text-zinc-400">
                 {tgiLabel && (
-                  <span className="inline-flex items-center gap-2 rounded.full bg-zinc-900 px-3 py-1 font-mono text-[11px] text-indigo-300">
+                  <span className="inline-flex items-center gap-2 rounded-full bg-zinc-900 px-3 py-1 font-mono text-[11px] text-indigo-300">
                     <span className="h-1.5 w-1.5 rounded-full bg-indigo-400" />
                     {tgiLabel}
                   </span>
@@ -308,7 +281,7 @@ export default function PublicIdeaPage() {
               )}
             </div>
 
-            <div className="px-8 pb-10 pt-5 space-y-9">
+            <div className="space-y-9 px-8 pb-10 pt-5">
               <section>
                 <PublicRichText content={idea.managerContent ?? ""} />
               </section>
@@ -331,11 +304,11 @@ export default function PublicIdeaPage() {
                 <PublicComments comments={ideaComments} />
 
                 <div className="mt-3 border-t border-zinc-900 pt-3">
-                  <div className="relative flex items-end">
-                    <textarea
-                      rows={1}
+                  <div className="relative flex items-center">
+                    <input
+                      type="text"
                       placeholder="Ajouter un commentaire public..."
-                      className="max-h-32 min-h-[36px] w-full resize-none rounded-xl border border-zinc-800 bg-zinc-900/40 px-3 pr-9 py-2 text-[12px] text-zinc-200 placeholder-zinc-600 outline-none transition focus:border-zinc-700 focus:bg-zinc-900"
+                      className="h-9 w-full rounded-xl border border-zinc-800 bg-zinc-900/40 pl-3 pr-9 text-[12px] text-zinc-200 placeholder-zinc-600 outline-none transition focus:border-zinc-700 focus:bg-zinc-900"
                       value={commentValue}
                       onChange={(e) => setCommentValue(e.target.value)}
                       onKeyDown={handleCommentKeyDown}
@@ -343,7 +316,7 @@ export default function PublicIdeaPage() {
                     <button
                       type="button"
                       onClick={handleSendClick}
-                      className="absolute right-2 bottom-2 flex h-6 w-6 items-center justify-center rounded-lg text-zinc-600 transition hover:bg-zinc-100 hover:text-black"
+                      className="absolute right-2 flex h-6 w-6 items-center justify-center rounded-lg text-zinc-600 transition hover:bg-zinc-100 hover:text-black"
                     >
                       <RiSendPlaneFill className="h-3.5 w-3.5" />
                     </button>
