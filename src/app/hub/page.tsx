@@ -22,7 +22,7 @@ type PublicIdea = {
   managerNote: string | null;
   links: { id: string; label: string; url: string }[];
   bullets: { id: string; text: string }[];
-  reactions?: { emoji: string }[];
+  reactions?: { emoji: string; fingerprint: string | null }[];
   comments?: { id: string; text: string; createdAt: string | Date }[];
 };
 
@@ -106,7 +106,7 @@ export default function HubPage() {
     [ideasRaw, folderMetaById],
   );
 
-  const initialReactions: ReactionMap = useMemo(() => {
+  const initialCounts: ReactionMap = useMemo(() => {
     const map: ReactionMap = {};
     ideasRaw.forEach((idea) => {
       const emojis: string[] = idea.reactions?.map((r) => r.emoji) ?? [];
@@ -114,6 +114,19 @@ export default function HubPage() {
     });
     return map;
   }, [ideasRaw]);
+
+  const myReactionsByIdeaId = useMemo(() => {
+    const map = new Map<string, Set<string>>();
+    ideasRaw.forEach((idea) => {
+      const mine = new Set(
+        (idea.reactions ?? [])
+          .filter((r) => r.fingerprint === fingerprint)
+          .map((r) => r.emoji),
+      );
+      map.set(idea.id, mine);
+    });
+    return map;
+  }, [ideasRaw, fingerprint]);
 
   const initialComments: CommentMap = useMemo(() => {
     const map: CommentMap = {};
@@ -144,7 +157,7 @@ export default function HubPage() {
   const getReactionsForIdea = (ideaId: string): string[] => {
     const local = reactions[ideaId];
     if (local) return local;
-    return initialReactions[ideaId] ?? [];
+    return initialCounts[ideaId] ?? [];
   };
 
   const getCommentsForIdea = (ideaId: string): Comment[] => {
@@ -154,19 +167,21 @@ export default function HubPage() {
   };
 
   const handleToggleReaction = (ideaId: string, emoji: string) => {
-    const current = getReactionsForIdea(ideaId);
-    const exists = current.includes(emoji);
+    const mine = myReactionsByIdeaId.get(ideaId) ?? new Set<string>();
+    const iReacted = mine.has(emoji);
 
     setReactions((prev) => {
-      const now = prev[ideaId] ?? current;
-      const next = exists ? now.filter((e) => e !== emoji) : [...now, emoji];
+      const base = prev[ideaId] ?? getReactionsForIdea(ideaId);
+      const next = iReacted
+        ? base.filter((e) => e !== emoji)
+        : [...base, emoji];
       return {
         ...prev,
         [ideaId]: next,
       };
     });
 
-    if (exists) {
+    if (iReacted) {
       clearReactionsMutation.mutate(
         { ideaId, emoji, fingerprint },
         {

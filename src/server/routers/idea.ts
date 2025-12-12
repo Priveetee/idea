@@ -238,17 +238,26 @@ export const ideaRouter = router({
       z.object({
         ideaId: z.string(),
         emoji: z.string().min(1).max(10),
-        fingerprint: z.string().optional(),
+        fingerprint: z.string().min(1),
       }),
     )
     .mutation(async ({ input }) => {
-      const reaction = await prisma.ideaReaction.create({
-        data: {
+      const reaction = await prisma.ideaReaction.upsert({
+        where: {
+          ideaId_emoji_fingerprint: {
+            ideaId: input.ideaId,
+            emoji: input.emoji,
+            fingerprint: input.fingerprint,
+          },
+        },
+        update: {},
+        create: {
           ideaId: input.ideaId,
           emoji: input.emoji,
-          fingerprint: input.fingerprint ?? null,
+          fingerprint: input.fingerprint,
         },
       });
+
       return reaction;
     }),
 
@@ -257,7 +266,7 @@ export const ideaRouter = router({
       z.object({
         ideaId: z.string(),
         emoji: z.string().min(1).max(10),
-        fingerprint: z.string().optional(),
+        fingerprint: z.string().min(1),
       }),
     )
     .mutation(async ({ input }) => {
@@ -265,8 +274,10 @@ export const ideaRouter = router({
         where: {
           ideaId: input.ideaId,
           emoji: input.emoji,
+          fingerprint: input.fingerprint,
         },
       });
+
       return { success: true };
     }),
 
