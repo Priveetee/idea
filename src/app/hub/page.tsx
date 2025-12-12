@@ -22,7 +22,7 @@ type PublicIdea = {
   managerNote: string | null;
   links: { id: string; label: string; url: string }[];
   bullets: { id: string; text: string }[];
-  reactions?: { emoji: string; fingerprint: string | null }[];
+  reactions?: { emoji: string; fingerprint: string }[];
   comments?: { id: string; text: string; createdAt: string | Date }[];
 };
 
@@ -44,8 +44,7 @@ function createComment(text: string): Comment {
 function getBrowserFingerprint(): string {
   if (typeof window === "undefined") return "server";
   const key = "idea_fingerprint";
-  const existing =
-    typeof window !== "undefined" ? window.localStorage.getItem(key) : null;
+  const existing = window.localStorage.getItem(key);
   if (existing) return existing;
   const fp = `${Date.now()}-${Math.random().toString(16).slice(2)}`;
   window.localStorage.setItem(key, fp);
@@ -142,8 +141,8 @@ export default function HubPage() {
     return map;
   }, [ideasRaw]);
 
-  const [reactions, setReactions] = useState<ReactionMap>({});
-  const [comments, setComments] = useState<CommentMap>({});
+  const [reactionOverrides, setReactionOverrides] = useState<ReactionMap>({});
+  const [commentOverrides, setCommentOverrides] = useState<CommentMap>({});
 
   const listItems: HubAnimatedListItem[] = useMemo(
     () =>
@@ -155,22 +154,26 @@ export default function HubPage() {
   );
 
   const getReactionsForIdea = (ideaId: string): string[] => {
-    const local = reactions[ideaId];
+    const local = reactionOverrides[ideaId];
     if (local) return local;
     return initialCounts[ideaId] ?? [];
   };
 
   const getCommentsForIdea = (ideaId: string): Comment[] => {
-    const local = comments[ideaId];
+    const local = commentOverrides[ideaId];
     if (local) return local;
     return initialComments[ideaId] ?? [];
+  };
+
+  const invalidate = () => {
+    void utils.idea.listPublic.invalidate();
   };
 
   const handleToggleReaction = (ideaId: string, emoji: string) => {
     const mine = myReactionsByIdeaId.get(ideaId) ?? new Set<string>();
     const iReacted = mine.has(emoji);
 
-    setReactions((prev) => {
+    setReactionOverrides((prev) => {
       const base = prev[ideaId] ?? getReactionsForIdea(ideaId);
       const next = iReacted
         ? base.filter((e) => e !== emoji)
@@ -184,20 +187,12 @@ export default function HubPage() {
     if (iReacted) {
       clearReactionsMutation.mutate(
         { ideaId, emoji, fingerprint },
-        {
-          onSuccess: () => {
-            void utils.idea.listPublic.invalidate();
-          },
-        },
+        { onSuccess: invalidate },
       );
     } else {
       addReactionMutation.mutate(
         { ideaId, emoji, fingerprint },
-        {
-          onSuccess: () => {
-            void utils.idea.listPublic.invalidate();
-          },
-        },
+        { onSuccess: invalidate },
       );
     }
   };
@@ -209,7 +204,7 @@ export default function HubPage() {
     const localComment = createComment(trimmed);
     const base = getCommentsForIdea(ideaId);
 
-    setComments((prev) => {
+    setCommentOverrides((prev) => {
       const now = prev[ideaId] ?? base;
       const next = [...now, localComment];
       return {
@@ -220,11 +215,7 @@ export default function HubPage() {
 
     addCommentMutation.mutate(
       { ideaId, text: trimmed, fingerprint },
-      {
-        onSuccess: () => {
-          void utils.idea.listPublic.invalidate();
-        },
-      },
+      { onSuccess: invalidate },
     );
   };
 
