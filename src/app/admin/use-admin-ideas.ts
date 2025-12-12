@@ -25,12 +25,8 @@ export type AdminFolderConfig = {
   id: string;
   label: string;
   color: string;
+  position: number;
 };
-
-const INITIAL_FOLDERS: AdminFolderConfig[] = [
-  { id: "INBOX", label: "Inbox général", color: "#5227FF" },
-  { id: "ARCHIVE", label: "Archives", color: "#64748b" },
-];
 
 type PrismaIdea = {
   id: string;
@@ -51,6 +47,13 @@ type SelectedIdea = {
   label: string;
   id: string;
   isPublic?: boolean;
+};
+
+type FolderRow = {
+  id: string;
+  label: string;
+  color: string;
+  position: number;
 };
 
 function prismaIdeaToIdeaItem(db: PrismaIdea): AdminIdeaItem {
@@ -85,7 +88,18 @@ function generateFolderId(existing: AdminFolderConfig[]): string {
 }
 
 export function useAdminIdeas() {
-  const { data, isLoading, refetch } = trpc.idea.list.useQuery();
+  const {
+    data: folderData,
+    isLoading: foldersLoading,
+    refetch: refetchFolders,
+  } = trpc.folder.list.useQuery();
+
+  const {
+    data: ideaData,
+    isLoading: ideasLoading,
+    refetch: refetchIdeas,
+  } = trpc.idea.list.useQuery();
+
   const createIdea = trpc.idea.create.useMutation();
   const renameIdea = trpc.idea.rename.useMutation();
   const deleteIdea = trpc.idea.delete.useMutation();
@@ -93,14 +107,28 @@ export function useAdminIdeas() {
   const setVisibilityMutation = trpc.idea.setVisibility.useMutation();
   const moveToFolderMutation = trpc.idea.moveToFolder.useMutation();
 
-  const [folders, setFolders] = useState<AdminFolderConfig[]>(INITIAL_FOLDERS);
-  const [activeStatus, setActiveStatus] = useState<AdminIdeaStatus>("INBOX");
-  const [selected, setSelected] = useState<SelectedIdea | null>(null);
+  const createFolderMutation = trpc.folder.create.useMutation();
+  const updateFolderMutation = trpc.folder.update.useMutation();
+  const deleteFolderMutation = trpc.folder.delete.useMutation();
+  const reorderFoldersMutation = trpc.folder.reorder.useMutation();
+
+  const isLoading = foldersLoading || ideasLoading;
+
+  const folders: AdminFolderConfig[] = useMemo(
+    () =>
+      ((folderData ?? []) as FolderRow[])
+        .slice()
+        .sort((a, b) => a.position - b.position),
+    [folderData],
+  );
 
   const ideas: AdminIdeaItem[] = useMemo(
-    () => ((data ?? []) as PrismaIdea[]).map(prismaIdeaToIdeaItem),
-    [data],
+    () => ((ideaData ?? []) as PrismaIdea[]).map(prismaIdeaToIdeaItem),
+    [ideaData],
   );
+
+  const [activeStatus, setActiveStatus] = useState<AdminIdeaStatus>("INBOX");
+  const [selected, setSelected] = useState<SelectedIdea | null>(null);
 
   const filteredIdeas = useMemo(
     () => ideas.filter((idea) => idea.status === activeStatus),
@@ -109,7 +137,7 @@ export function useAdminIdeas() {
 
   const totalIdeas = ideas.length;
   const inboxCount = ideas.filter((i) => i.status === "INBOX").length;
-  const devCount = 0;
+  const devCount = ideas.filter((i) => i.status === "DEV").length;
   const archiveCount = ideas.filter((i) => i.status === "ARCHIVE").length;
 
   const changeStatus = (status: AdminIdeaStatus) => {
@@ -143,7 +171,7 @@ export function useAdminIdeas() {
         links: [],
         bullets: [],
       });
-      await refetch();
+      await refetchIdeas();
     } catch {}
   };
 
@@ -152,106 +180,86 @@ export function useAdminIdeas() {
     if (!trimmed) return;
     try {
       await renameIdea.mutateAsync({ id, label: trimmed });
-      await refetch();
+      await refetchIdeas();
     } catch {}
   };
 
   const deleteIdeaLocal = async (id: string) => {
     try {
       await deleteIdea.mutateAsync({ id });
-      await refetch();
+      await refetchIdeas();
     } catch {}
     setSelected((prev) => (prev && prev.id === id ? null : prev));
   };
 
-  const addFolder = () => {
+  const addFolder = async () => {
     const newId = generateFolderId(folders);
-    const folder: AdminFolderConfig = {
-      id: newId,
-      label: `Espace ${folders.length + 1}`,
-      color: "#22c55e",
-    };
-    setFolders((prev) => [...prev, folder]);
-    setActiveStatus(newId);
-    setSelected(null);
+    try {
+      await createFolderMutation.mutateAsync({
+        id: newId,
+        label: `Espace ${folders.length + 1}`,
+        color: "#22c55e",
+      });
+      await refetchFolders();
+      setActiveStatus(newId);
+      setSelected(null);
+    } catch {}
   };
 
-  const renameFolder = (id: string, label: string) => {
-    setFolders((prev) => prev.map((f) => (f.id === id ? { ...f, label } : f)));
+  const renameFolder = async (id: string, label: string) => {
+    const trimmed = label.trim();
+    if (!trimmed) return;
+    try {
+      await updateFolderMutation.mutateAsync({ id, label: trimmed });
+      await refetchFolders();
+    } catch {}
   };
 
-  const changeFolderColor = (id: string, color: string) => {
-    setFolders((prev) => prev.map((f) => (f.id === id ? { ...f, color } : f)));
+  const changeFolderColor = async (id: string, color: string) => {
+    try {
+      await updateFolderMutation.mutateAsync({ id, color });
+      await refetchFolders();
+    } catch {}
   };
 
-  const duplicateFolder = (id: string) => {
-    setFolders((prevFolders) => {
-      const source = prevFolders.find((f) => f.id === id);
-      if (!source) return prevFolders;
-
-      const newFolderId = generateFolderId(prevFolders);
-      const duplicateFolderConfig: AdminFolderConfig = {
-        id: newFolderId,
+  const duplicateFolder = async (id: string) => {
+    const source = folders.find((f) => f.id === id);
+    if (!source) return;
+    const newId = generateFolderId(folders);
+    try {
+      await createFolderMutation.mutateAsync({
+        id: newId,
         label: `${source.label} (copie)`,
         color: source.color,
-      };
-
-      return [...prevFolders, duplicateFolderConfig];
-    });
+      });
+      await refetchFolders();
+    } catch {}
   };
 
-  const deleteFolder = (id: string) => {
+  const deleteFolder = async (id: string) => {
     if (id === "INBOX" || id === "ARCHIVE") return;
 
-    setFolders((prevFolders) => {
-      const nextFolders = prevFolders.filter((f) => f.id !== id);
-      if (nextFolders.length === 0) {
-        setActiveStatus("INBOX");
-      } else if (activeStatus === id) {
-        const fallback =
-          nextFolders.find((f) => f.id === "INBOX") ?? nextFolders[0];
-        setActiveStatus(fallback.id);
-      }
-      return nextFolders;
-    });
+    try {
+      await deleteFolderMutation.mutateAsync({ id });
+      await Promise.all([refetchFolders(), refetchIdeas()]);
+    } catch {}
 
     setSelected((prev) => (prev && prev.status === id ? null : prev));
+
+    if (activeStatus === id) {
+      setActiveStatus("INBOX");
+    }
   };
 
-  const reorderFolders = (orderedIds: string[]) => {
-    setFolders((prev) => {
-      const byId = new Map(prev.map((f) => [f.id, f]));
-      const next: AdminFolderConfig[] = [];
-
-      orderedIds.forEach((id) => {
-        const folder = byId.get(id);
-        if (folder) next.push(folder);
-      });
-
-      prev.forEach((folder) => {
-        if (!orderedIds.includes(folder.id)) {
-          next.push(folder);
-        }
-      });
-
-      return next;
-    });
+  const reorderFolders = async (orderedIds: string[]) => {
+    try {
+      await reorderFoldersMutation.mutateAsync({ orderedIds });
+      await refetchFolders();
+    } catch {}
   };
 
   const reorderIdeas = (orderedIds: string[]) => {
-    const currentStatus = activeStatus;
-    const byId = new Map(ideas.map((i) => [i.id, i]));
-    const inStatus = ideas.filter((i) => i.status === currentStatus);
-    const others = ideas.filter((i) => i.status !== currentStatus);
-
-    const orderedInStatus = orderedIds
-      .map((id) => byId.get(id))
-      .filter((idea): idea is AdminIdeaItem => idea !== undefined)
-      .filter((idea) => idea.status === currentStatus);
-
-    if (orderedInStatus.length !== inStatus.length) return;
-
-    void others;
+    const _ = orderedIds;
   };
 
   const moveIdeaToFolder = async (ideaId: string, targetFolderId: string) => {
@@ -260,8 +268,9 @@ export function useAdminIdeas() {
         id: ideaId,
         status: targetFolderId,
       });
-      await refetch();
+      await refetchIdeas();
     } catch {}
+
     setSelected((prev) =>
       prev && prev.id === ideaId ? { ...prev, status: targetFolderId } : prev,
     );
@@ -294,14 +303,14 @@ export function useAdminIdeas() {
           text: b.text,
         })),
       });
-      await refetch();
+      await refetchIdeas();
     } catch {}
   };
 
   const setVisibility = async (payload: { id: string; isPublic: boolean }) => {
     try {
       await setVisibilityMutation.mutateAsync(payload);
-      await refetch();
+      await refetchIdeas();
     } catch {}
     setSelected((prev) =>
       prev && prev.id === payload.id
