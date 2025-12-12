@@ -51,6 +51,12 @@ export function HubIdeaHeaderBody({
 }: HubIdeaHeaderBodyProps) {
   const end = label.indexOf("]");
   const tgi = end === -1 ? null : label.slice(0, end + 1);
+
+  const isCustomFolder =
+    idea.status !== "INBOX" &&
+    idea.status !== "ARCHIVE" &&
+    idea.status !== "DEV";
+
   const status = STATUS_CONFIG[idea.status] ?? STATUS_CONFIG.DEFAULT;
   const links = idea.managerLinks ?? [];
 
@@ -63,12 +69,20 @@ export function HubIdeaHeaderBody({
               {tgi}
             </span>
           )}
+
           <span
             className={`inline-flex items-center gap-1.5 rounded-full px-2 py-0.5 text-[10px] font-semibold tracking-wide ${status.bg} ${status.text}`}
           >
             <span className={`h-1.5 w-1.5 rounded-full ${status.dot}`} />
             {status.label}
           </span>
+
+          {isCustomFolder && idea.originLabel && (
+            <span className="inline-flex items-center rounded-full bg-zinc-900/80 px-2 py-0.5 text-[10px] text-zinc-400">
+              {idea.originLabel}
+            </span>
+          )}
+
           {totalReactions > 0 && (
             <span className="inline-flex items-center gap-1 rounded-full bg-zinc-900/80 px-2 py-0.5 text-[10px] text-zinc-400">
               {totalReactions} réaction{totalReactions > 1 ? "s" : ""}

@@ -108,6 +108,7 @@ export function useAdminIdeas() {
   const moveToFolderMutation = trpc.idea.moveToFolder.useMutation();
 
   const createFolderMutation = trpc.folder.create.useMutation();
+  const duplicateFolderMutation = trpc.folder.duplicate.useMutation();
   const updateFolderMutation = trpc.folder.update.useMutation();
   const deleteFolderMutation = trpc.folder.delete.useMutation();
   const reorderFoldersMutation = trpc.folder.reorder.useMutation();
@@ -225,14 +226,17 @@ export function useAdminIdeas() {
   const duplicateFolder = async (id: string) => {
     const source = folders.find((f) => f.id === id);
     if (!source) return;
+
     const newId = generateFolderId(folders);
+    const newLabel = `${source.label} (copie)`;
+
     try {
-      await createFolderMutation.mutateAsync({
-        id: newId,
-        label: `${source.label} (copie)`,
-        color: source.color,
+      await duplicateFolderMutation.mutateAsync({
+        sourceId: id,
+        newId,
+        newLabel,
       });
-      await refetchFolders();
+      await Promise.all([refetchFolders(), refetchIdeas()]);
     } catch {}
   };
 

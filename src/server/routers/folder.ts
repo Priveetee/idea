@@ -10,6 +10,7 @@ const SYSTEM_FOLDERS = [
 async function ensureSystemFolders() {
   const existing = await prisma.adminFolder.findMany({
     where: { id: { in: SYSTEM_FOLDERS.map((f) => f.id) } },
+    select: { id: true },
   });
 
   const existingIds = new Set(existing.map((f) => f.id));
@@ -60,6 +61,75 @@ export const folderRouter = router({
       });
 
       return folder;
+    }),
+
+  duplicate: publicProcedure
+    .input(
+      z.object({
+        sourceId: z.string().min(1),
+        newId: z.string().min(1),
+        newLabel: z.string().min(1),
+      }),
+    )
+    .mutation(async ({ input }) => {
+      const source = await prisma.adminFolder.findUnique({
+        where: { id: input.sourceId },
+      });
+
+      if (!source) {
+        return { success: false, createdIdeas: 0 };
+      }
+
+      const last = await prisma.adminFolder.findFirst({
+        orderBy: { position: "desc" },
+        select: { position: true },
+      });
+
+      await prisma.adminFolder.create({
+        data: {
+          id: input.newId,
+          label: input.newLabel,
+          color: source.color,
+          position: (last?.position ?? -1) + 1,
+        },
+      });
+
+      const ideas = await prisma.idea.findMany({
+        where: { status: input.sourceId },
+        include: { links: true, bullets: true },
+      });
+
+      if (ideas.length === 0) {
+        return { success: true, createdIdeas: 0 };
+      }
+
+      await prisma.$transaction(
+        ideas.map((idea) =>
+          prisma.idea.create({
+            data: {
+              label: idea.label,
+              status: input.newId,
+              managerSummary: idea.managerSummary,
+              managerContent: idea.managerContent,
+              managerNote: idea.managerNote,
+              isPublic: false,
+              links: {
+                create: idea.links.map((l) => ({
+                  label: l.label,
+                  url: l.url,
+                })),
+              },
+              bullets: {
+                create: idea.bullets.map((b) => ({
+                  text: b.text,
+                })),
+              },
+            },
+          }),
+        ),
+      );
+
+      return { success: true, createdIdeas: ideas.length };
     }),
 
   update: publicProcedure

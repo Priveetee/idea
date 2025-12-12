@@ -21,6 +21,7 @@ export type HubIdeaItem = {
   id: string;
   label: string;
   status: string;
+  originLabel?: string;
   managerSummary?: string;
   managerContent?: string;
   managerLinks?: HubIdeaLink[];
@@ -97,7 +98,7 @@ export function HubIdeaCard({
 
       <div className="mt-auto px-5 pb-5 pt-5">
         <HubIdeaReactionsBar
-          stacked={stackReactions(reactions)}
+          stacked={stacked}
           onToggleReaction={onToggleReaction}
         />
 

@@ -26,6 +26,13 @@ type PublicIdea = {
   comments?: { id: string; text: string; createdAt: string | Date }[];
 };
 
+type FolderRow = {
+  id: string;
+  label: string;
+  color: string;
+  position: number;
+};
+
 function createComment(text: string): Comment {
   return {
     id: `${Date.now()}-${Math.random().toString(16).slice(2)}`,
@@ -47,6 +54,7 @@ function getBrowserFingerprint(): string {
 
 export default function HubPage() {
   const { data, isLoading } = trpc.idea.listPublic.useQuery();
+  const { data: folderData } = trpc.folder.list.useQuery();
 
   const utils = trpc.useUtils();
   const addReactionMutation = trpc.idea.addReaction.useMutation();
@@ -54,6 +62,17 @@ export default function HubPage() {
   const addCommentMutation = trpc.idea.addComment.useMutation();
 
   const fingerprint = getBrowserFingerprint();
+
+  const folders: FolderRow[] = useMemo(
+    () => (folderData ?? []) as FolderRow[],
+    [folderData],
+  );
+
+  const folderLabelById = useMemo(() => {
+    const map = new Map<string, string>();
+    folders.forEach((f) => map.set(f.id, f.label));
+    return map;
+  }, [folders]);
 
   const ideasRaw: PublicIdea[] = useMemo(
     () => (data ?? []) as PublicIdea[],
@@ -66,6 +85,7 @@ export default function HubPage() {
         id: idea.id,
         label: idea.label,
         status: idea.status,
+        originLabel: folderLabelById.get(idea.status) ?? undefined,
         managerSummary: idea.managerSummary ?? "",
         managerContent: idea.managerContent ?? "",
         managerLinks: idea.links.map((l) => ({
@@ -79,7 +99,7 @@ export default function HubPage() {
         })),
         managerNote: idea.managerNote ?? "",
       })),
-    [ideasRaw],
+    [ideasRaw, folderLabelById],
   );
 
   const initialReactions: ReactionMap = useMemo(() => {
